@@ -134,7 +134,7 @@ bool load_content() {
 
 	//set light properties
 	spot.set_position(vec3(vec3(-50, 40, 50)));
-	spot.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	spot.set_light_colour(vec4(0.416f, 0.353f, 0.804f, 1.0f));
 	spot.set_direction(normalize(-spot.get_position()));
 	spot.set_range(500.0f);
 	spot.set_power(10.0f);
@@ -168,12 +168,13 @@ bool update(float delta_time) {
 		(static_cast<float>(renderer::get_screen_height()) / static_cast<float>(renderer::get_screen_width()))) /
 		static_cast<float>(renderer::get_screen_height());
 
+	//variable where mouse position will be stored
 	double current_x;
 	double current_y;
 
 	// Get the current cursor position
 	glfwGetCursorPos(renderer::get_window(), &current_x, &current_y);
-	// Calculate delta of cursor positions from last frame
+	// Calculate delta of cursor positions
 	double delta_x = current_x - cursor_x;
 	double delta_y = current_y - cursor_y;
 
@@ -232,9 +233,6 @@ bool update(float delta_time) {
 	shadow.light_position = spot.get_position();
 	// update light dir
 	shadow.light_dir = spot.get_direction();
-
-	if (glfwGetKey(renderer::get_window(), 'S') == GLFW_PRESS)
-		shadow.buffer->save("test.png");
 
 	// Update the camera
 	cam.update(delta_time);
@@ -323,6 +321,7 @@ bool render() {
 		// set eye position
 		glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 
+		//bind shadow texture and set uniform
 		renderer::bind(texs[i], i + 20);
 		glUniform1i(eff.get_uniform_location("shadow_map"), i + 20);
 

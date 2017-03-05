@@ -104,8 +104,8 @@ bool update(float delta_time) {
   // *********************************
 
   // Press s to save
-  if (glfwGetKey(renderer::get_window(), 'S') == GLFW_PRESS)
-    shadow.buffer->save("test.png");
+  //if (glfwGetKey(renderer::get_window(), 'S') == GLFW_PRESS)
+  //  shadow.buffer->save("test.png");
 
   return true;
 }

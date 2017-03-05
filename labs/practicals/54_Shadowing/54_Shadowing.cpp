@@ -16,15 +16,15 @@ shadow_map shadow;
 bool load_content() {
   // *********************************
   // Create shadow map- use screen size
-
-  // Create plane mesh
-
-  // Create "teapot" mesh by loading in models/teapot.obj
-
-  // Translate Teapot(0,4,0)
-
-  // Scale the teapot - (0.1, 0.1, 0.1)
-
+	shadow = shadow_map(renderer::get_screen_width(), renderer::get_screen_height());
+	// Create plane mesh
+	meshes["plane"] = mesh(geometry_builder::create_plane());
+	// Create "teapot" mesh by loading in models/teapot.obj
+	meshes["teapot"] = mesh(geometry("models/teapot.obj"));
+	// Need to rotate the teapot on x by negative pi/2
+	//meshes["teapot"].get_transform().rotate(vec3(-pi<float>()/2, 0.0f, 0.0f));
+	// Scale the teapot - (0.1, 0.1, 0.1)
+	meshes["teapot"].get_transform().scale = vec3(0.1, 0.1, 0.1);
   // *********************************
 
   // Load texture
@@ -60,12 +60,12 @@ bool load_content() {
   spot.set_power(10.0f);
 
   // Load in shaders
-  main_eff.add_shader("54_Shadowing/shadow.vert", GL_VERTEX_SHADER);
-  vector<string> frag_shaders{"54_Shadowing/shadow.frag", "shaders/part_spot.frag", "shaders/part_shadow.frag"};
+  main_eff.add_shader("shaders/shadow.vert", GL_VERTEX_SHADER);
+  vector<string> frag_shaders{"shaders/shadow.frag", "shaders/part_spot.frag", "shaders/part_shadow.frag"};
   main_eff.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
 
-  shadow_eff.add_shader("50_Spot_Light/spot.vert", GL_VERTEX_SHADER);
-  shadow_eff.add_shader("50_Spot_Light/spot.frag", GL_FRAGMENT_SHADER);
+  shadow_eff.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
+  shadow_eff.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
 
   // Build effects
   main_eff.build();
@@ -98,9 +98,9 @@ bool update(float delta_time) {
 
   // *********************************
   // Update the shadow map light_position from the spot light
-
+  shadow.light_position = spot.get_position();
   // do the same for light_dir property
-
+  shadow.light_dir = spot.get_direction();
   // *********************************
 
   // Press s to save
@@ -112,12 +112,11 @@ bool update(float delta_time) {
 
 bool render() {
   // *********************************
-  // Set render target to shadow map
-
-  // Clear depth buffer bit
-
-  // Set face cull mode to front
-
+	renderer::set_render_target(shadow);
+	// Clear depth buffer bit
+	glClear(GL_DEPTH_BUFFER_BIT);
+	// Set face cull mode to front
+	glCullFace(GL_FRONT);
   // *********************************
 
   // We could just use the Camera's projection, 
@@ -134,7 +133,7 @@ bool render() {
     auto M = m.get_transform().get_transform_matrix();
     // *********************************
     // View matrix taken from shadow map
-
+	auto V = shadow.get_view();
     // *********************************
     auto MVP = LightProjectionMat * V * M;
     // Set MVP matrix uniform
@@ -147,9 +146,9 @@ bool render() {
   }
   // *********************************
   // Set render target back to the screen
-
+  renderer::set_render_target();
   // Set face cull mode to back
-
+  glCullFace(GL_BACK);
   // *********************************
 
   // Bind shader
@@ -176,29 +175,29 @@ bool render() {
     // *********************************
     // Set lightMVP uniform, using:
      //Model matrix from m
-
+	glUniformMatrix4fv(main_eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
     // viewmatrix from the shadow map
-
+	auto shadow_view = shadow.get_view();
     // Multiply together with LightProjectionMat
-
+	auto light_proj_mat = shadow_view *  LightProjectionMat;
     // Set uniform
 
     // Bind material
-
+	renderer::bind(m.get_material(), "mat");
     // Bind spot light
-
+	renderer::bind(spot, "spot");
     // Bind texture
-
+	renderer::bind(tex, 0);
     // Set tex uniform
-
+	glUniform1i(main_eff.get_uniform_location("tex"), 0);
     // Set eye position
-
+	glUniform3fv(main_eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
     // Bind shadow map texture - use texture unit 1
-
+	renderer::bind(tex, 1);
     // Set the shadow_map uniform
-
+	glUniform1i(main_eff.get_uniform_location("shadow_map"), 1);
     // Render mesh
-
+	renderer::render(m);
     // *********************************
   }
 

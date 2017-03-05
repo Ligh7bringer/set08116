@@ -53,15 +53,15 @@ bool load_content() {
   // Pos (20, 30, 0), White
   // Direction (-1, -1, 0) normalized
   // 50 range, 10 power
-  spot.set_position(vec3(30.0f, 20.0f, 0.0f));
-  spot.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  spot.set_direction(normalize(-spot.get_position()));
-  spot.set_range(500.0f);
-  spot.set_power(10.0f);
+	  spot.set_position(vec3(30.0f, 20.0f, 0.0f));
+	  spot.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	  spot.set_direction(normalize(-spot.get_position()));
+	  spot.set_range(500.0f);
+	  spot.set_power(10.0f);
 
   // Load in shaders
   main_eff.add_shader("shaders/shadow.vert", GL_VERTEX_SHADER);
-  vector<string> frag_shaders{"shaders/shadow.frag", "shaders/part_spot.frag", "shaders/part_shadow.frag"};
+  vector<string> frag_shaders{"shaders/shadow.frag", "shaders/part_s.frag", "shaders/part_shd.frag"};
   main_eff.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
 
   shadow_eff.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
@@ -174,14 +174,14 @@ bool render() {
                        value_ptr(m.get_transform().get_normal_matrix()));
     // *********************************
     // Set lightMVP uniform, using:
-     //Model matrix from m
-	glUniformMatrix4fv(main_eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+    //Model matrix from m
+	auto light_model = M;
     // viewmatrix from the shadow map
 	auto shadow_view = shadow.get_view();
     // Multiply together with LightProjectionMat
-	auto light_proj_mat = shadow_view *  LightProjectionMat;
+	auto lightMVP = LightProjectionMat * shadow_view * light_model;
     // Set uniform
-
+	glUniformMatrix4fv(main_eff.get_uniform_location("lightMVP"), 1, GL_FALSE, value_ptr(lightMVP));
     // Bind material
 	renderer::bind(m.get_material(), "mat");
     // Bind spot light

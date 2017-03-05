@@ -7,6 +7,7 @@ using namespace glm;
 
 geometry geom;
 effect eff;
+effect shadow_eff;
 free_camera cam;
 
 //cursor position for camera
@@ -20,7 +21,10 @@ array<texture, 9> texs;
 map<string, mesh> meshes;
 
 //light
-directional_light light;
+spot_light spot;
+
+//shadow map
+shadow_map shadow;
 
 bool initialiase() {
 	// hide the pointer
@@ -32,6 +36,9 @@ bool initialiase() {
 }
 
 bool load_content() {
+	// Create shadow map with screen dimensions
+	shadow = shadow_map(renderer::get_screen_width(), renderer::get_screen_height());
+
 	//plane
 	meshes["plane"] = mesh(geometry_builder::create_plane());
 
@@ -59,7 +66,7 @@ bool load_content() {
 	//axe
 	meshes["axe"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	meshes["axe"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-	meshes["axe"].get_material().set_specular(vec4(0.0f, 1.0f, 0.0f, 1.0f));
+	meshes["axe"].get_material().set_specular(vec4(0.5f, 0.35f, 0.05f, 1.0f));
 	meshes["axe"].get_material().set_shininess(10.0f);
 	//path
 	meshes["path"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -126,19 +133,23 @@ bool load_content() {
 	texs[8] = texture("textures/bark.jpg");
 
 	//set light properties
-	// ambient intensity
-	light.set_ambient_intensity(vec4(0.3f, 0.3f, 0.3f, 1.0f));
-	// colour
-	light.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	// direction
-	light.set_direction(vec3(1.0f, 1.0f, -1.0f));
+	spot.set_position(vec3(vec3(-50, 40, 50)));
+	spot.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	spot.set_direction(normalize(-spot.get_position()));
+	spot.set_range(500.0f);
+	spot.set_power(10.0f);
 
 	// Load shaders
-	eff.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER);
-	eff.add_shader("shaders/phong.vert", GL_VERTEX_SHADER);
+	eff.add_shader("shaders/shadow.vert", GL_VERTEX_SHADER);
+	vector<string> frag_shaders{ "shaders/shadow.frag", "shaders/part_s.frag", "shaders/part_shd.frag" };
+	eff.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
+
+	shadow_eff.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
+	shadow_eff.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
 
 	// Build effect
 	eff.build();
+	shadow_eff.build();
 
 	// Set camera properties
 	cam.set_position(vec3(-50.0f, 10.0f, 0.0f));
@@ -217,6 +228,14 @@ bool update(float delta_time) {
 	cursor_x = current_x;
 	cursor_y = current_y;
 
+	// update light position
+	shadow.light_position = spot.get_position();
+	// update light dir
+	shadow.light_dir = spot.get_direction();
+
+	if (glfwGetKey(renderer::get_window(), 'S') == GLFW_PRESS)
+		shadow.buffer->save("test.png");
+
 	// Update the camera
 	cam.update(delta_time);
 
@@ -224,6 +243,43 @@ bool update(float delta_time) {
 }
 
 bool render() {
+	renderer::set_render_target(shadow);
+	// Clear depth buffer bit
+	glClear(GL_DEPTH_BUFFER_BIT);
+	// Set face cull mode to front
+	glCullFace(GL_FRONT);
+
+	//calcuate light projection matrix
+	mat4 LightProjectionMat = perspective<float>(90.f, renderer::get_screen_aspect(), 0.1f, 1000.f);
+
+	//bind shadow effect
+	renderer::bind(shadow_eff);
+
+	for (auto &e : meshes) {
+		auto m = e.second;
+		// Create MVP matrix
+		auto M = m.get_transform().get_transform_matrix();
+		// View matrix taken from shadow map
+		auto V = shadow.get_view();
+		// calculate mvp
+		auto MVP = LightProjectionMat * V * M;
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(shadow_eff.get_uniform_location("MVP"), // Location of uniform
+			1,                                      // Number of values - 1 mat4
+			GL_FALSE,                               // Transpose the matrix?
+			value_ptr(MVP));                        // Pointer to matrix data
+													// Render mesh
+		renderer::render(m);
+	}
+
+	//set render target to screen
+	renderer::set_render_target();
+	// Set face cull mode to back
+	glCullFace(GL_BACK);
+
+	// Bind shader
+	renderer::bind(eff);
+
 	// accumulator to take care of textures and their ids when passing to the shader
 	int i = 0;
 	//for-each loop to take care of all meshes
@@ -245,10 +301,21 @@ bool render() {
 		glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
 		// Set N uniform
 		glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
+
+		// Set lightMVP uniform, using:
+		//Model matrix from m
+		auto light_model = M;
+		// viewmatrix from the shadow map
+		auto shadow_view = shadow.get_view();
+		// Multiply together with LightProjectionMat
+		auto lightMVP = LightProjectionMat * shadow_view * light_model;
+		// Set uniform
+		glUniformMatrix4fv(eff.get_uniform_location("lightMVP"), 1, GL_FALSE, value_ptr(lightMVP));
+
 		// bind material
 		renderer::bind(m.get_material(), "mat");
 		// bind light
-		renderer::bind(light, "light");
+		renderer::bind(spot, "spot");
 		//bind texture
 		renderer::bind(texs[i], i);
 		//set tex uniform
@@ -256,10 +323,8 @@ bool render() {
 		// set eye position
 		glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 
-		//bind texture
-		renderer::bind(texs[i], i);
-		//set tex uniform
-		glUniform1i(eff.get_uniform_location("tex"), i);
+		renderer::bind(texs[i], i + 20);
+		glUniform1i(eff.get_uniform_location("shadow_map"), i + 20);
 
 		// render mesh
 		renderer::render(m);

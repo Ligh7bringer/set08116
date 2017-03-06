@@ -1,0 +1,182 @@
+%FILL THESE IN
+\def\mytitle{Coursework Report}
+\def\mykeywords{Phong shading, spot light, texturing, lighting, object transformation}
+\def\myauthor{Svetlozar Georgiev}
+\def\contact{40203970@napier.ac.uk}
+\def\mymodule{Computer Graphics (SET08116)}
+%YOU DON'T NEED TO TOUCH ANYTHING BELOW
+\documentclass[10pt, a4paper]{article}
+\usepackage[a4paper,outer=1.5cm,inner=1.5cm,top=1.75cm,bottom=1.5cm]{geometry}
+\twocolumn
+\usepackage{graphicx}
+\graphicspath{{./images/}}
+%colour our links, remove weird boxes
+\usepackage[colorlinks,linkcolor={black},citecolor={blue!80!black},urlcolor={blue!80!black}]{hyperref}
+%Stop indentation on new paragraphs
+\usepackage[parfill]{parskip}
+%% all this is for Arial
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{uarial}
+\renewcommand{\familydefault}{\sfdefault}
+%Napier logo top right
+\usepackage{watermark}
+%Lorem Ipusm dolor please don't leave any in you final repot ;)
+\usepackage{lipsum}
+\usepackage{xcolor}
+\usepackage{listings}
+%give us the Capital H that we all know and love
+\usepackage{float}
+%tone down the linespacing after section titles
+\usepackage{titlesec}
+%Cool maths printing
+\usepackage{amsmath}
+%PseudoCode
+\usepackage{algorithm2e}
+
+\titlespacing{\subsection}{0pt}{\parskip}{-3pt}
+\titlespacing{\subsubsection}{0pt}{\parskip}{-\parskip}
+\titlespacing{\paragraph}{0pt}{\parskip}{\parskip}
+\newcommand{\figuremacro}[5]{
+    \begin{figure}[#1]
+        \centering
+        \includegraphics[width=#5\columnwidth]{#2}
+        \caption[#3]{\textbf{#3}#4}
+        \label{fig:#2}
+    \end{figure}
+}
+
+\lstset{
+	escapeinside={/*@}{@*/}, language=C++,
+	basicstyle=\fontsize{8.5}{12}\selectfont,
+	numbers=left,numbersep=2pt,xleftmargin=2pt,frame=tb,
+    columns=fullflexible,showstringspaces=false,tabsize=4,
+    keepspaces=true,showtabs=false,showspaces=false,
+    backgroundcolor=\color{white}, morekeywords={inline,public,
+    class,private,protected,struct},captionpos=t,lineskip=-0.4em,
+	aboveskip=10pt, extendedchars=true, breaklines=true,
+	prebreak = \raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+	keywordstyle=\color[rgb]{0,0,1},
+	commentstyle=\color[rgb]{0.133,0.545,0.133},
+	stringstyle=\color[rgb]{0.627,0.126,0.941}
+}
+
+\thiswatermark{\centering \put(336.5,-38.0){\includegraphics[scale=0.8]{logo}} }
+\title{\mytitle}
+\author{\myauthor\hspace{1em}\\\contact\\Edinburgh Napier University\hspace{0.5em}-\hspace{0.5em}\mymodule}
+\date{}
+\hypersetup{pdfauthor=\myauthor,pdftitle=\mytitle,pdfkeywords=\mykeywords}
+\sloppy
+\begin{document}
+	\maketitle
+	\begin{abstract}
+    The aim of this project is to create a 3D scene in OpenGL, using key graphical rendering principles. A renderer framework was used in order to create effects and reduce development time. A number of graphical techniques were implemented such as lighting, texturing, cameras. The resulting scene is a moonlit eerie house, surrounded by dead trees. The inspiration for the project came from the cartoon Courage the Cowardly Dog \cite{courage}.
+    \figuremacro{h}{courage.jpg}{Courage the Cowardly Dog}{ \textit{Inspiration for the project} }{1.0}
+	\end{abstract}
+
+    \textbf{Keywords -- }{\mykeywords}
+    %START FROM HERE
+    \section{Introduction}
+    \paragraph{Main effects}
+    Multiple different effects were implemented in this project, the key ones being:
+    \begin{itemize}
+        \item Shading
+        \item Lighting
+        \item Texturing
+        \item Transformations
+    \end{itemize}
+    \paragraph{Shading}
+    Shading is a method which adds depth perception to 3D models to make them look more realistic. The direction of the light as well as the direction an object is facing are taken into account. Parts of an object facing directly the light source are more lit, hence why they appear brighter. On the other hand, parts facing away from the light source receive less light and are therefore darker.
+
+    \paragraph{Lighting}
+    Lighting refers to the technique of simulating light sources which affect certain aspects of the objects on the scene such as their colour and reflections.
+
+    \paragraph{Texturing}
+    Texturing means applying an image to the surface of an object which allows the addition of more detail. What is more, it creates the illusion of materials when used in conjunction with lighting and shading.
+
+    \paragraph{Transformations}
+    Three types of object transformations were used in the project:
+    \begin{itemize}
+        \item Scaling
+        \item Rotation
+        \item Translation
+    \end{itemize}
+    Scaling an object refers to increasing or decreasing its size.
+
+    Rotating an object changes which way it is facing.
+
+    Translating an object changes its position in the world.
+
+
+    \paragraph{Motivation}
+    The motivation behind this project is the application of skills developed from undertaking the Computer Graphics (SET08116) module and gaining further knowledge in the field of graphics rendering by creating a 3D scene.
+
+    \paragraph{Limitations}
+    While creating the project, a number of problems were encountered, the main one being the lack of resources online. OpenGL is widely used, however many different versions exists and often information found on the internet was misleading. Ultimately, the time constraint turned out to be the biggest limitation.
+
+    \section{Related work}
+    While developing the project, the main source used was the SET08116 Workbook \cite{workbook}. Most methods and practices can be found there or were inspired by it.
+
+    \section{Implementation}
+    The following key graphical techniques were implemented in the project
+    \begin{itemize}
+        \item Phong shading
+        \item Spot lighting
+        \item Texturing
+        \item Transformations
+        \item Free camera
+    \end{itemize}
+
+    \paragraph{Lighting}
+    The light source used in the project is a spotlight (Figure 2). It is positioned above the scene and it lights the scene with blue light as if it were moonlight. The equations used to calculate the necessary values for the spot light are as follows:
+    \textit{Equation 1} is used to calculate spot light intensity using the direction of the light, the direction to the light and the power of the light.
+    \textit{Equation 2} is the calculation of the attenuation factor using the attenuation values.
+    \textit{Equation 3} provides the final colour.
+    \begin{equation}
+    I =  max(-R . L, 0)^p
+    \end{equation}
+    \begin{equation}
+    A =  c + l * d + q*d^2
+    \end{equation}
+    \begin{equation}
+    C = (I / A) * L
+    \end{equation}
+    where \textit{C} is the final colour, \textit{I} is the light intensity, \textit{A} is the attenuation factor and \textit{L} is the light colour. The resulting colour is then used in the Phong shading equation. Phong shading is implemented in conjunction with the spot light to create the effect of objects having depth.
+    \figuremacro{h}{light.png}{Spot light}{ \textit{Moonlight effect with spot light} }{1.0}
+
+    \paragraph{Phong shading}
+    Phong shading (Figure 3) refers to the principle of colouring different faces of objects depending on the texture and light levels. The colour of every pixel is calculated depending on the light direction, location and colour as well as material properties.
+    \textit{Equation 4} shows the calculation of the pixel colour.
+    \begin{equation}
+    C = (E + D) * T + S
+    \end{equation}
+    where \textit{C} is the colour of the pixel that is to be calculated, \textit{E} is the emissive reflection of the material, \textit{D} is the diffuse component, \textit{T} is the colour of the texture at that pixel and \textit{S} is the specular component.
+    \figuremacro{h}{phong.png}{Phong shading}{ }{1.0}
+
+    \paragraph{Free camera} A free camera was implemented allowing free movement around the scene. The controls for the camera are the mouse, used to change the view direction, and the keyboard to move the camera.
+
+    \section{Future work}
+	  Although a number of key graphics principles were implemented, the project still has room for improvement.
+    Shadowing was attempted, however due to time constraints, it was not fully implemented and it will be one of the effects to be added in the future. Furthermore, other techniques such as normal mapping, animation, skybox, particle effects will be implemented as well.
+
+    \section{Conclusion}
+    To conclude, this project employs a number of basic graphical techniques in order to create a realistic and visually pleasing scene using OpenGL. Although the result is satisfactory, implementing more features would certainly improve the project's aesthetics and effects.
+
+\bibliographystyle{ieeetr}
+%\bibliography{references}
+
+\begin{thebibliography}{9}
+
+\bibitem{courage}
+  John R. Dilworth,
+  \emph{Courage the cowardly dog},
+  1999.
+
+  \bibitem{workbook}
+    Kevin Chalmers and Sam Serrels,
+    \emph{SET08116 Computer Graphics Workbook 2016/17},
+    2016.
+
+\end{thebibliography}
+
+\end{document}

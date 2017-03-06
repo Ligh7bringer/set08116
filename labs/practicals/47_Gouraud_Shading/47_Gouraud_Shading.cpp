@@ -47,8 +47,8 @@ bool load_content() {
   // - all specular is white
   // - all shininess is 25
   // Red box
-  meshes["box"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["box"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+  meshes["box"].get_material().set_emissive(vec4(0.0f,0.0f,0.0f,1.0f));
+  meshes["box"].get_material().set_specular(vec4(1.0f,1.0f,1.0f,1.0f));
   meshes["box"].get_material().set_shininess(25.0);
   meshes["box"].get_material().set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f));
   // Green tetra
@@ -89,14 +89,14 @@ bool load_content() {
   // *********************************
   // Set lighting values
   // ambient intensity (0.3, 0.3, 0.3)
-  light.set_ambient_intensity((vec4(0.3, 0.3, 0.3, 1.0f)));
+  light.set_ambient_intensity;
   // Light colour white
   light.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   // Light direction (1.0, 1.0, -1.0)
-  light.set_direction(vec3(1.0, 1.0, -1.0));
+  light.set_direction(vec3(1.0f, 1.0f, -1.0f));
   // Load in shaders
-  eff.add_shader("shaders/gouraud.frag", GL_FRAGMENT_SHADER);
-  eff.add_shader("shaders/gouraud.vert", GL_VERTEX_SHADER);
+  eff.add_shader("47_Gouraud_Shading/gouraud.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("47_Gouraud_Shading/gouraud.vert", GL_VERTEX_SHADER);
   // Build effect
   eff.build();
   // *********************************
@@ -141,14 +141,14 @@ bool render() {
     auto V = cam.get_view();
     auto P = cam.get_projection();
     auto MVP = P * V * M;
-	mat3 N = transpose(inverse(M * V));
+	mat3 N = transpose(inverse(M*V));
     // Set MVP matrix uniform
     glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
-
+	
     // *********************************
     // Set M matrix uniform
-	glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));   
-	// Set N matrix uniform - remember - 3x3 matrix
+	glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+    // Set N matrix uniform - remember - 3x3 matrix
 	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(N));
     // Bind material
 	renderer::bind(m.get_material(), "mat");
@@ -158,13 +158,13 @@ bool render() {
 	renderer::bind(tex, 0);
     // Set tex uniform
 	glUniform1i(eff.get_uniform_location("tex"), 0);
-	// Set eye position - Get this from active camera
-	glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));		
+    // Set eye position - Get this from active camera
+	glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
     // Render mesh
 	renderer::render(m);
     // *********************************
   }
-  
+
   return true;
 }
 

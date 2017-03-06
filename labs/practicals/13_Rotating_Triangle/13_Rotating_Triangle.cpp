@@ -1,6 +1,7 @@
+#define _USE_MATH_DEFINES
 #include <glm\glm.hpp>
 #include <graphics_framework.h>
-
+#include <math.h>
 using namespace std;
 using namespace graphics_framework;
 using namespace glm;
@@ -48,7 +49,7 @@ bool render() {
   mat4 R;
   // *********************************
   // Create rotation matrix - rotate around Z axis by theta
-
+  R = rotate(mat4(1.0f), theta, vec3(1.0f, 0.0f, 1.0f));
   // *********************************
   // Create MVP matrix
   auto V = cam.get_view();

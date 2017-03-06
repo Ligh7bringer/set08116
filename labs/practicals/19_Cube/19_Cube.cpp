@@ -18,22 +18,63 @@ bool load_content() {
       // *********************************
       // Add the position data for triangles here, (6 verts per side)
       // Front
+	  vec3(1.0f, 1.0f, 0.0f),
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, 1.0f, 0.0f),//first triangle
 
-
+	  vec3(-1.0f, 1.0f, 0.0f),
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, -1.0f, 0.0f),//second one
       // Back
+	  vec3(-1.0f, 1.0f, 1.0f),
+	  vec3(1.0f, -1.0f, 1.0f),
+	  vec3(1.0f, 1.0f, 1.0f), //first triangle
 
+	  vec3(-1.0f, -1.0f, 1.0f),
+	  vec3(1.0f, -1.0f, 1.0f),
+	  vec3(-1.0f, 1.0f, 1.0f), //second one
 
       // Right
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(1.0f, 1.0f, 0.0f),
+	  vec3(1.0f, 1.0f, 1.0f), //first triangle
 
+
+	  vec3(1.0f, 1.0f, 1.0f),
+	  vec3(1.0f, -1.0f, 1.0f),
+	  vec3(1.0f, -1.0f, 0.0f),//second one
 
       // Left
+	  
+	  vec3(-1.0f, 1.0f, 0.0f),
+	  vec3(-1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, 1.0f, 1.0f),	//first triangle
 
+
+	  vec3(-1.0f, 1.0f, 1.0f),
+	  vec3(-1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, -1.0f, 1.0f),//second one
 
       // Top
 
+	  vec3(-1.0f, 1.0f, 0.0f),
+	  vec3(-1.0f, 1.0f, 1.0f),
+	  vec3(1.0f, 1.0f, 0.0f), //first triangle
+
+
+	  vec3(-1.0f, 1.0f, 1.0f),
+	  vec3(1.0f, 1.0f, 1.0f),
+	  vec3(1.0f, 1.0f, 0.0f),//second one
+
 
       // Bottom
+	  vec3(-1.0f, -1.0f, 0.0f),
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, -1.0f, 1.0f), //first triangle
 
+	  vec3(-1.0f, -1.0f, 1.0f),
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(1.0f, -1.0f, 1.0f)//second one
 
       // *********************************
   };

@@ -95,9 +95,11 @@ bool render() {
     // Bind correct texture to renderer
 
     // Set the texture value for the shader here
-
+	
     // Render the mesh
-
+	for each(auto m in meshes) {
+		renderer::render(m);
+	}	
     // *********************************
   }
 

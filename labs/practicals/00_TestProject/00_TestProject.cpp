@@ -141,5 +141,6 @@ int main() {
   application.set_render(render);
   // Run application
   application.run();
+  //cin.get();
   return 0;
 }

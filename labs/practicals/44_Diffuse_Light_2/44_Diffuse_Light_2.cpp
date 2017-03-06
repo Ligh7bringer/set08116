@@ -90,13 +90,14 @@ bool render() {
 
     // *********************************
     // Set N matrix uniform - remember - 3x3 matrix
-
-    // Set material colour - all objects red
-
-    // Set light colour - (1.0, 1.0, 1.0, 1.0)
-
-    // Set light direction - (1.0, 1.0, -1.0)
-
+	mat3 N = transpose(inverse(M*V));
+	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE,value_ptr(N));
+	// Set material colour- all objects red
+	glUniform4fv(eff.get_uniform_location("material_colour"), 1, value_ptr(vec4(1.0f, 0.0f, 0.0f, 1.0f)));
+	// Set light colour- (1.0, 1.0, 1.0, 1.0)
+	glUniform4fv(eff.get_uniform_location("light_colour"), 1, value_ptr(vec4(1.0f, 1.0f, 1.0f, 1.0f)));
+	// Set light direction - (1.0, 1.0, -1.0)
+	glUniform3fv(eff.get_uniform_location("light_dir"), 1, value_ptr(vec3(1.0, 1.0, 0.4)));
     // *********************************
     // Render mesh
     renderer::render(m);

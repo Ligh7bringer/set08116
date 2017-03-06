@@ -86,14 +86,15 @@ bool load_content() {
   // Load texture
   tex = texture("textures/checker.png");
   // *********************************
+  // Set lighting values, Position (-25, 10, -10)
   light.set_position(vec3((-25.0f, 10.0f, -10.0f)));
   // Light colour white
   light.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   // Set range to 20
   light.set_range(20.0f);
   // Load in shaders
-  eff.add_shader("shaders/point.vert", GL_VERTEX_SHADER);
-  eff.add_shader("shaders/point.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("49_Point_Light/point.vert", GL_VERTEX_SHADER);
+  eff.add_shader("49_Point_Light/point.frag", GL_FRAGMENT_SHADER);
   // Build effect
   eff.build();
   // *********************************
@@ -109,38 +110,38 @@ bool update(float delta_time) {
   // Range of the point light
   static float range = 20.0f;
   // *********************************
-  if (glfwGetKey(renderer::get_window(), '1')) {
-	  cam.set_position(vec3(50, 10, 50));
-  }
-  if (glfwGetKey(renderer::get_window(), '2')) {
-	  cam.set_position(vec3(-50, 10, 50));
-  }
-  if (glfwGetKey(renderer::get_window(), '3')) {
-	  cam.set_position(vec3(-50, 10, -50));
-  }
-  if (glfwGetKey(renderer::get_window(), '4')) {
-	  cam.set_position(vec3(50, 10, -50));
-  }
+	  if (glfwGetKey(renderer::get_window(), '1')) {
+		  cam.set_position(vec3(50, 10, 50));
+	  }
+	  if (glfwGetKey(renderer::get_window(), '2')) {
+		  cam.set_position(vec3(-50, 10, 50));
+	  }
+	  if (glfwGetKey(renderer::get_window(), '3')) {
+		  cam.set_position(vec3(-50, 10, -50));
+	  }
+	  if (glfwGetKey(renderer::get_window(), '4')) {
+		  cam.set_position(vec3(50, 10, -50));
+	  }
   // WSAD to move point light
-  if (glfwGetKey(renderer::get_window(), GLFW_KEY_W)) {
-	  light.move(vec3(0.0f, 0.0f, -5.0f));
-  }
-  if (glfwGetKey(renderer::get_window(), GLFW_KEY_S)) {
-	  light.move(vec3(0.0f, 0.0f, 5.0f));
-  }
-  if (glfwGetKey(renderer::get_window(), GLFW_KEY_A)) {
-	  light.move(vec3(-5.0f, 0.0f, 0.0f));
-  }
-  if (glfwGetKey(renderer::get_window(), GLFW_KEY_D)) {
-	  light.move(vec3(5.0f, 0.0f, 0.0f));
-  }
+	  if (glfwGetKey(renderer::get_window(), GLFW_KEY_W)) {
+		  light.move(vec3(0.0f, 0.0f, -5.0f));
+	  }
+	  if (glfwGetKey(renderer::get_window(), GLFW_KEY_S)) {
+		  light.move(vec3(0.0f, 0.0f, 5.0f));
+	  }
+	  if (glfwGetKey(renderer::get_window(), GLFW_KEY_A)) {
+		  light.move(vec3(-5.0f, 0.0f, 0.0f));
+	  }
+	  if (glfwGetKey(renderer::get_window(), GLFW_KEY_D)) {
+		  light.move(vec3(5.0f, 0.0f, 0.0f));
+	  }
   // O and P to change range
-  if (glfwGetKey(renderer::get_window(), GLFW_KEY_O)) {
-	  range -= 1.0f;
-  }
-  if (glfwGetKey(renderer::get_window(), GLFW_KEY_P)) {
-	  range += 1.0f;
-  }
+	  if (glfwGetKey(renderer::get_window(), GLFW_KEY_O)) {
+		range -= 1.0f;
+	  }
+	  if (glfwGetKey(renderer::get_window(), GLFW_KEY_P)) {
+		  range += 1.0f;
+	  }
   // *********************************
 
   // Set range
@@ -165,6 +166,7 @@ bool render() {
     auto V = cam.get_view();
     auto P = cam.get_projection();
     auto MVP = P * V * M;
+	mat3 N = transpose(inverse(M*V));
     // Set MVP matrix uniform
     glUniformMatrix4fv(eff.get_uniform_location("MVP"), // Location of uniform
                        1,                               // Number of values - 1 mat4
@@ -172,13 +174,14 @@ bool render() {
                        value_ptr(MVP));                 // Pointer to matrix data
 
     // *********************************
+	// Set M matrix uniform
 	glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
 	// Set N matrix uniform - remember - 3x3 matrix
-	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
+	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(N));
 	// Bind material
 	renderer::bind(m.get_material(), "mat");
 	// Bind light
-	renderer::bind(light, "point");
+	renderer::bind(light, "light");
 	// Bind texture
 	renderer::bind(tex, 0);
 	// Set tex uniform

@@ -12,6 +12,7 @@ float theta = 0.0f;
 float rho = 0.0f;
 vec3 pos(0.0f, 0.0f, 0.0f);
 float s = 1.0f;
+float total_time = 0.0f;
 
 bool load_content() {
   // Create cube data - twelve triangles triangles
@@ -20,23 +21,63 @@ bool load_content() {
       // *********************************
       // Add the position data for triangles here, (6 verts per side)
       // Front
+	  vec3(1.0f, 1.0f, 0.0f),
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, 1.0f, 0.0f),//first triangle
 
-
+	  vec3(-1.0f, 1.0f, 0.0f),
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, -1.0f, 0.0f),//second one
       // Back
+	  vec3(-1.0f, 1.0f, 2.0f),
+	  vec3(1.0f, -1.0f, 2.0f),
+	  vec3(1.0f, 1.0f, 2.0f), //first triangle
 
+	  vec3(-1.0f, -1.0f, 2.0f),
+	  vec3(1.0f, -1.0f, 2.0f),
+	  vec3(-1.0f, 1.0f, 2.0f), //second one
 
       // Right
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(1.0f, 1.0f, 0.0f),
+	  vec3(1.0f, 1.0f, 2.0f), //first triangle
 
+
+	  vec3(1.0f, 1.0f, 2.0f),
+	  vec3(1.0f, -1.0f, 2.0f),
+	  vec3(1.0f, -1.0f, 0.0f),//second one
 
       // Left
+	  
+	  vec3(-1.0f, 1.0f, 0.0f),
+	  vec3(-1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, 1.0f, 2.0f),	//first triangle
 
+
+	  vec3(-1.0f, 1.0f, 2.0f),
+	  vec3(-1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, -1.0f, 2.0f),//second one
 
       // Top
 
+	  vec3(-1.0f, 1.0f, 0.0f),
+	  vec3(-1.0f, 1.0f, 2.0f),
+	  vec3(1.0f, 1.0f, 0.0f), //first triangle
+
+
+	  vec3(-1.0f, 1.0f, 2.0f),
+	  vec3(1.0f, 1.0f, 2.0f),
+	  vec3(1.0f, 1.0f, 0.0f),//second one
+
 
       // Bottom
+	  vec3(-1.0f, -1.0f, 0.0f),
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(-1.0f, -1.0f, 2.0f), //first triangle
 
-
+	  vec3(-1.0f, -1.0f, 2.0f),
+	  vec3(1.0f, -1.0f, 0.0f),
+	  vec3(1.0f, -1.0f, 2.0f)//second one
       // *********************************
   };
   // Colours
@@ -64,39 +105,54 @@ bool load_content() {
 
 bool update(float delta_time) {
   // *********************************
+	
   // Use keys to update transform values
+
   // WSAD - movement
-  // Arrow Keys - rotation
+	//in
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_W))
+	{
+		pos += vec3(0.0f, 0.0f, -5.0f)*delta_time;
+	}
+	//out
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_S))
+	{
+		pos += vec3(0.0f, 0.0f, 5.0f)*delta_time;
+	}
+	//right
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_D))
+	{
+		pos += vec3(5.0f, 0.0f, 0.0f)*delta_time;
+	}
+	//left
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_A))
+	{
+		pos += vec3(-5.0f, 0.0f, 0.0f)*delta_time;
+	}
+
+	// Arrow Keys - rotation
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_UP)) {
+		theta -= pi<float>() * delta_time;
+	}
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_DOWN)) {
+		theta += pi<float>() * delta_time;
+	}
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_RIGHT)) {
+		rho -= pi<float>() * delta_time;
+	}
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_LEFT)) {
+		rho += pi<float>() * delta_time;
+	}
+	// Accumulate time
+	total_time += delta_time;
+
   // O decrease scale, P increase scale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_P)) {
+		s += 1.0f * delta_time;
+	}
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_O)) {
+		s -= 1.0f * delta_time;
+	}
 
   // *********************************
   // Update the camera
@@ -110,12 +166,14 @@ bool render() {
   mat4 T, R, S, M;
   // *********************************
   // Create transformation matrix
-
-
-
-
+  R = eulerAngleXZ(theta, rho);
+  S = scale(mat4(1.0f), vec3(s, s, s));
+  T = translate(mat4(1.0f), pos);
+  // Combine matrices to set M - remember multiplication order
+  M = T*(R*S);
   // *********************************
   // Create MVP matrix
+ 
   auto V = cam.get_view();
   auto P = cam.get_projection();
   auto MVP = P * V * M;

@@ -204,7 +204,7 @@ bool render() {
 	// Set M matrix uniform
 	glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
 	// Set N matrix uniform - remember - 3x3 matrix
-	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(N));
+	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
 	// Bind material
 	renderer::bind(m.get_material(), "mat");
     // Bind point lights

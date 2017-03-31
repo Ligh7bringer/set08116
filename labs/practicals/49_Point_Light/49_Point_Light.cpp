@@ -93,8 +93,8 @@ bool load_content() {
   // Set range to 20
   light.set_range(20.0f);
   // Load in shaders
-  eff.add_shader("49_Point_Light/point.vert", GL_VERTEX_SHADER);
-  eff.add_shader("49_Point_Light/point.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("shaders/point.vert", GL_VERTEX_SHADER);
+  eff.add_shader("shaders/point.frag", GL_FRAGMENT_SHADER);
   // Build effect
   eff.build();
   // *********************************
@@ -166,7 +166,6 @@ bool render() {
     auto V = cam.get_view();
     auto P = cam.get_projection();
     auto MVP = P * V * M;
-	mat3 N = transpose(inverse(M*V));
     // Set MVP matrix uniform
     glUniformMatrix4fv(eff.get_uniform_location("MVP"), // Location of uniform
                        1,                               // Number of values - 1 mat4
@@ -177,11 +176,11 @@ bool render() {
 	// Set M matrix uniform
 	glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
 	// Set N matrix uniform - remember - 3x3 matrix
-	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(N));
+	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
 	// Bind material
 	renderer::bind(m.get_material(), "mat");
 	// Bind light
-	renderer::bind(light, "light");
+	renderer::bind(light, "point");
 	// Bind texture
 	renderer::bind(tex, 0);
 	// Set tex uniform

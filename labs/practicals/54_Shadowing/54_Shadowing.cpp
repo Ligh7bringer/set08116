@@ -16,19 +16,19 @@ shadow_map shadow;
 bool load_content() {
   // *********************************
   // Create shadow map- use screen size
-
+	shadow = shadow_map(renderer::get_screen_width(), renderer::get_screen_height());
   // Create plane mesh
-
+	meshes["plane"] = mesh(geometry_builder::create_plane());
   // Create "teapot" mesh by loading in models/teapot.obj
-
+	meshes["teapot"] = mesh(geometry("models/teapot.obj"));
   // Need to rotate the teapot on x by negative pi/2
-
+	meshes["teapot"].get_transform().translate(vec3((0.0f, 4.0f, 0.0f)));
   // Scale the teapot - (0.1, 0.1, 0.1)
-
+	meshes["teapot"].get_transform().scale = vec3(0.1f, 0.1f, 0.1f);
   // *********************************
 
   // Load texture
-  tex = texture("textures/checker.png");
+  tex = texture("textures/checked.gif");
 
   // ***********************
   // Set materials
@@ -43,7 +43,7 @@ bool load_content() {
   meshes["plane"].get_material().set_shininess(25.0f);
   // Red teapot
   meshes["teapot"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["teapot"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+  meshes["teapot"].get_material().set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f));
   meshes["teapot"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   meshes["teapot"].get_material().set_shininess(25.0f);
 
@@ -55,13 +55,13 @@ bool load_content() {
   // 50 range, 10 power
   spot.set_position(vec3(30.0f, 20.0f, 0.0f));
   spot.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  spot.set_direction(normalize(vec3(-1.0f, -1.0f, 0.0f)));
+  spot.set_direction(normalize(-spot.get_position()));
   spot.set_range(500.0f);
   spot.set_power(10.0f);
 
   // Load in shaders
   main_eff.add_shader("54_Shadowing/shadow.vert", GL_VERTEX_SHADER);
-  vector<string> frag_shaders{"54_Shadowing/shadow.frag", "shaders/part_spot.frag", "shaders/part_shadow.frag"};
+  vector<string> frag_shaders{"54_Shadowing/shadow.frag", "shaders/part_s.frag", "shaders/part_shd.frag"};
   main_eff.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
 
   shadow_eff.add_shader("50_Spot_Light/spot.vert", GL_VERTEX_SHADER);
@@ -80,12 +80,25 @@ bool load_content() {
 
 bool update(float delta_time) {
   // Rotate the teapot
-  meshes["teapot"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
+  meshes["teapot"].get_transform().rotate(vec3(0.0f, half_pi<float>() * delta_time, 0.0f));
+
+  if (glfwGetKey(renderer::get_window(), '1')) {
+	  cam.set_position(vec3(0.0f, 50.0f, -75.0f));
+  }
+  if (glfwGetKey(renderer::get_window(), '2')) {
+	  cam.set_position(spot.get_position());
+  }
+  if (glfwGetKey(renderer::get_window(), '3')) {
+	  cam.set_position(vec3(-25.0, 50.0, 0.0));
+  }
+  if (glfwGetKey(renderer::get_window(), '4')) {
+	  cam.set_position(vec3(-50, 2.0, 0));
+  }
 
   // *********************************
   // Update the shadow map properties from the spot light
-
-
+  shadow.light_dir = spot.get_direction();
+  shadow.light_position = spot.get_position();
   // *********************************
 
   // Press s to save
@@ -100,15 +113,17 @@ bool update(float delta_time) {
 bool render() {
   // *********************************
   // Set render target to shadow map
-
+	renderer::set_render_target(shadow);
   // Clear depth buffer bit
-
+	glClear(GL_DEPTH_BUFFER_BIT);
   // Set render mode to cull face
-
+	glCullFace(GL_FRONT);
   // *********************************
 
   // Bind shader
   renderer::bind(shadow_eff);
+
+  mat4 LightProjectionMat = perspective<float>(90.f, renderer::get_screen_aspect(), 0.1f, 1000.f);
 
   // Render meshes
   for (auto &e : meshes) {
@@ -116,11 +131,10 @@ bool render() {
     // Create MVP matrix
     auto M = m.get_transform().get_transform_matrix();
     // View matrix taken from shadow map
-
+	auto V = shadow.get_view();
     // *********************************
 
-    auto P = cam.get_projection();
-    auto MVP = P * V * M;
+    auto MVP = LightProjectionMat * V * M;
     // Set MVP matrix uniform
     glUniformMatrix4fv(shadow_eff.get_uniform_location("MVP"), // Location of uniform
                        1,                                      // Number of values - 1 mat4
@@ -131,9 +145,9 @@ bool render() {
   }
   // *********************************
   // Set render target back to the screen
-
+  renderer::set_render_target();
   // Set cull face to back
-
+  glCullFace(GL_BACK);
   // *********************************
 
   // Bind shader
@@ -159,26 +173,27 @@ bool render() {
                        value_ptr(m.get_transform().get_normal_matrix()));
     // *********************************
     // Set light transform
-
-
-
-
-
+	auto LM = m.get_transform().get_transform_matrix();
+	auto LV = shadow.get_view();
+	auto LP = cam.get_projection();
+	auto LightMVP = LP * LV * LM;
+	glUniformMatrix4fv(main_eff.get_uniform_location("lightMVP"), 1, GL_FALSE, value_ptr(LightMVP));
     // Bind material
-
+	renderer::bind(m.get_material(), "mat");
     // Bind spot lights
-
+	renderer::bind(spot, "spot");
     // Bind texture
-
+	renderer::bind(tex, 0);
     // Set tex uniform
-
+	glUniform1i(main_eff.get_uniform_location("tex"), 0);
     // Set eye position
-
-    // Bind shadow map texture - use texture unit 1
-
-
+	glUniform3fv(main_eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+	// Bind shadow map texture - use texture unit 1
+	renderer::bind(shadow.buffer->get_depth(), 1);
+	//set the shadw map uniform
+	glUniform1i(main_eff.get_uniform_location("shadow_map"), 1);
     // Render mesh
-
+	renderer::render(m);
     // *********************************
   }
 

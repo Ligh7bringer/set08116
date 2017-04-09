@@ -88,15 +88,15 @@ bool load_content() {
   light.set_direction(vec3(1.0f, 1.0f, -1.0f));
 
   // Load in shaders
-  eff.add_shader("48_Phong_Shading/phong.vert", GL_VERTEX_SHADER);
-  eff.add_shader("48_Phong_Shading/phong.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("shaders/phong.vert", GL_VERTEX_SHADER);
+  eff.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER);
   // Build effect
   eff.build();
 
   // Load in debug effect
   debug_eff.add_shader("64_Showing_Normals/shader.vert", GL_VERTEX_SHADER);
   debug_eff.add_shader("64_Showing_Normals/shader.frag", GL_FRAGMENT_SHADER);
-  debug_eff.add_shader("64_Showing_Normals/normals.geom", GL_GEOMETRY_SHADER);
+  debug_eff.add_shader("shaders/normals.geom", GL_GEOMETRY_SHADER);
   debug_eff.build();
 
   // Set camera properties

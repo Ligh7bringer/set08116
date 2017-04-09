@@ -43,7 +43,7 @@ bool load_content() {
 
   // Load shader
   eff.add_shader("65_Billboarding/shader.vert", GL_VERTEX_SHADER);
-  eff.add_shader("65_Billboarding/billboard.geom", GL_GEOMETRY_SHADER);
+  eff.add_shader("shaders/billboard.geom", GL_GEOMETRY_SHADER);
   eff.add_shader("65_Billboarding/shader.frag", GL_FRAGMENT_SHADER);
   eff.build();
 

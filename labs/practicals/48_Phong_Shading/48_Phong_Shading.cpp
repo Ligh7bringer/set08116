@@ -83,7 +83,7 @@ bool load_content() {
   meshes["torus"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   // *********************************
   // Load texture
-  tex = texture("textures/checker.png");
+  tex = texture("textures/checked.gif");
   // *********************************
   // ambient intensity (0.3, 0.3, 0.3)
   light.set_ambient_intensity(vec4(0.3, 0.3, 0.3, 1.0f));
@@ -92,8 +92,8 @@ bool load_content() {
   // Light direction (1.0, 1.0, -1.0)
   light.set_direction(vec3(1.0f, 1.0f, -1.0f));
   // Load in shaders
-  eff.add_shader("48_Phong_Shading/phong.frag", GL_FRAGMENT_SHADER);
-  eff.add_shader("48_Phong_Shading/phong.vert", GL_VERTEX_SHADER);
+  eff.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("shaders/phong.vert", GL_VERTEX_SHADER);
   // Build effect
   eff.build();
   // *********************************

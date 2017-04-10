@@ -36,12 +36,12 @@ bool load_content() {
   // Load in shaders
   eff.add_shader("68_Smoke_Effect/smoke.vert", GL_VERTEX_SHADER);
   eff.add_shader("68_Smoke_Effect/smoke.frag", GL_FRAGMENT_SHADER);
-  eff.add_shader("68_Smoke_Effect/smoke.geom", GL_GEOMETRY_SHADER);
+  eff.add_shader("shaders/smoke.geom", GL_GEOMETRY_SHADER);
 
   eff.build();
 
   // Load in shaders
-  compute_eff.add_shader("67_Compute_Shader/particle.comp", GL_COMPUTE_SHADER);
+  compute_eff.add_shader("shaders/particle.comp", GL_COMPUTE_SHADER);
   compute_eff.build();
 
   // a useless vao, but we need it bound or we get errors.
@@ -49,18 +49,18 @@ bool load_content() {
   glBindVertexArray(vao);
   // *********************************
    //Generate Position Data buffer
-
+  glGenBuffers(1, &G_Position_buffer);
   // Bind as GL_SHADER_STORAGE_BUFFER
-
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, G_Position_buffer);
   // Send Data to GPU, use GL_DYNAMIC_DRAW
-
+  glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(positions), positions, GL_DYNAMIC_DRAW);
 
   // Generate Velocity Data buffer
-
+  glGenBuffers(1, &G_Velocity_buffer);
   // Bind as GL_SHADER_STORAGE_BUFFER
-
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, G_Velocity_buffer);
   // Send Data to GPU, use GL_DYNAMIC_DRAW
-
+  glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(velocitys), velocitys, GL_DYNAMIC_DRAW);
   // *********************************
    //Unbind
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -132,21 +132,22 @@ bool render() {
 
   // *********************************
   // Bind render effect
-
+  renderer::bind(eff);
   // Create MV matrix
-
-
-
+  auto M = mat4(1.0f);
+  auto P = cam.get_projection();
+  auto V = cam.get_view();
+  auto MV = V * M;
   // Set the colour uniform
-
+  glUniform4fv(eff.get_uniform_location("colour"), 1, value_ptr(vec4(0.5f, 0.5f, 0.5f,1.0f)));
   // Set MV, and P matrix uniforms seperatly
-
-
+  glUniformMatrix4fv(eff.get_uniform_location("MV"), 1, GL_FALSE, value_ptr(MV));
+  glUniformMatrix4fv(eff.get_uniform_location("P"), 1, GL_FALSE, value_ptr(P));
   // Set point_size size uniform to .1f
-
+  glUniform1f(eff.get_uniform_location("point_size"), 0.1f);
   // Bind particle texture
-
-
+  renderer::bind(tex, 0);
+  glUniform1i(eff.get_uniform_location("tex"), 0);
   // *********************************
 
   // Bind position buffer as GL_ARRAY_BUFFER

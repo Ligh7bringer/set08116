@@ -57,7 +57,7 @@ bool load_content() {
   eff.build();
 
   particle_eff.add_shader("66_Particle_System/particle.vert", GL_VERTEX_SHADER);
-  particle_eff.add_shader("66_Particle_System/particle.geom", GL_GEOMETRY_SHADER);
+  particle_eff.add_shader("shaders/particle.geom", GL_GEOMETRY_SHADER);
   particle_eff.add_shader("66_Particle_System/particle.frag", GL_FRAGMENT_SHADER);
   particle_eff.build();
 
@@ -78,18 +78,18 @@ bool load_content() {
   glGenBuffers(2, particle_buffers_vbo);
   // *********************************
   // Place initial particle data in buffer 1
-
-
+  glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[0]);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
 
   // Fill space with blank data in buffer 2
-
-
+  glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[1]);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(particles), NULL, GL_DYNAMIC_DRAW);
 
   // generate our feedback objects
-
+  glGenTransformFeedbacks(2, transform_feedbacks);
   // link fb[0] to vbo[1]
-
-
+  glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transform_feedbacks[0]);
+  glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, particle_buffers_vbo[1]);
   // *********************************
   // link fb[1] to vbo[0]
   glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transform_feedbacks[1]);
@@ -165,7 +165,7 @@ bool render() {
   auto MVP = P * V * M;
   glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
   // Set the colour uniform
-  glUniform4fv(eff.get_uniform_location("colour"), 1, value_ptr(vec4(1.0f)));
+  glUniform4fv(eff.get_uniform_location("colour"), 1, value_ptr(vec4(1.0f, 0.0f, 0.0f, 1.0f)));
 
   // Bind the back particle buffer for rendering
   glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[front_buf]);
@@ -180,8 +180,8 @@ bool render() {
 
   // *********************************
   // Swap front and back buffers
-
-
+  front_buf = back_buf;
+  back_buf = (back_buf + 1) % 2;
   // *********************************
   return true;
 }

@@ -1,4 +1,4 @@
-#version 440
+#version 450 core
 
 // This shader requires spot.frag, shadow.frag
 

@@ -34,7 +34,7 @@ bool load_content() {
   eff.add_shader("shaders/basic_colour.frag", GL_FRAGMENT_SHADER);
   eff.build();
   // Load in shaders
-  compute_eff.add_shader("67_Compute_Shader/particle.comp", GL_COMPUTE_SHADER);
+  compute_eff.add_shader("shaders/particle.comp", GL_COMPUTE_SHADER);
   compute_eff.build();
 
   // a useless vao, but we need it bound or we get errors.
@@ -42,18 +42,18 @@ bool load_content() {
   glBindVertexArray(vao);
   // *********************************
    //Generate Position Data buffer
-
+  glGenBuffers(1, &G_Position_buffer);
   // Bind as GL_SHADER_STORAGE_BUFFER
-
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, G_Position_buffer);
   // Send Data to GPU, use GL_DYNAMIC_DRAW
-
+  glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(positions), positions, GL_DYNAMIC_DRAW);
 
   // Generate Velocity Data buffer
-
+  glGenBuffers(1, &G_Velocity_buffer);
   // Bind as GL_SHADER_STORAGE_BUFFER
-
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, G_Velocity_buffer);
   // Send Data to GPU, use GL_DYNAMIC_DRAW
-
+  glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(velocitys), velocitys, GL_DYNAMIC_DRAW);
   // *********************************
    //Unbind
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);

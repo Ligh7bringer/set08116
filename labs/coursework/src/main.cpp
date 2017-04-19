@@ -6,8 +6,11 @@ using namespace graphics_framework;
 using namespace glm;
 
 geometry geom;
+
+//effects
 effect eff;
-effect shadow_eff;
+effect sky_eff;
+
 free_camera cam;
 
 //cursor position for camera
@@ -15,16 +18,17 @@ double cursor_x = 0.0;
 double cursor_y = 0.0;
 
 //textures
-array<texture, 9> texs;
+array<texture, 11> texs;
 
 //map for meshes
 map<string, mesh> meshes;
 
 //light
 spot_light spot;
-
-//shadow map
-shadow_map shadow;
+vector<point_light> points(2);
+//cubemap for the skybox
+cubemap cube_map;
+mesh skybox;
 
 bool initialiase() {
 	// hide the pointer
@@ -36,8 +40,10 @@ bool initialiase() {
 }
 
 bool load_content() {
-	// Create shadow map with screen dimensions
-	shadow = shadow_map(renderer::get_screen_width(), renderer::get_screen_height());
+
+	//skybox
+	skybox = mesh(geometry_builder::create_box());
+	skybox.get_transform().scale = vec3(100, 100, 100);
 
 	//plane
 	meshes["plane"] = mesh(geometry_builder::create_plane());
@@ -51,6 +57,8 @@ bool load_content() {
 	meshes["tree2"] = meshes["tree"];
 	meshes["chair"].set_geometry(geometry("models/chair4.obj"));
 	meshes["mill"].set_geometry(geometry("models/windmill.obj"));
+	meshes["lamp"] = mesh(geometry("models/lamp.obj"));
+	meshes["lamp2"] = mesh(geometry("models/lamp.obj"));
 
 	//set materials
 	//house
@@ -93,6 +101,11 @@ bool load_content() {
 	meshes["mill"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
 	meshes["mill"].get_material().set_specular(vec4(0.871f, 0.722f, 0.529f, 1.0f));
 	meshes["mill"].get_material().set_shininess(10.0f);
+	//lamp
+	meshes["lamp"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	meshes["lamp"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	meshes["lamp"].get_material().set_specular(vec4(0.827f, 0.827f, 0.827f, 1.0f));
+	meshes["lamp"].get_material().set_shininess(20.0f);
 
 	//mesh transformations
 	//house
@@ -120,36 +133,56 @@ bool load_content() {
 	//mill
 	meshes["mill"].get_transform().position = vec3(-20, 0, -20);
 	meshes["mill"].get_transform().scale = vec3(3.0f, 4.0f, 3.0f);
+	//lamp2
+	meshes["lamp2"].get_transform().position += vec3(0.0f, 0.0f, 20.0f);
 
 	//textures
 	texs[0] = texture("textures/axe.png");
 	texs[1] = texture("textures/barrel2.jpg");
 	texs[2] = texture("textures/wood3.JPG");
 	texs[3] = texture("textures/house.jpg");
-	texs[4] = texture("textures/rust.jpg");
-	texs[5] = texture("textures/pavement.jpg");
-	texs[6] = texture("textures/grass2.jpg");
-	texs[7] = texture("textures/bark2.jpg");
-	texs[8] = texture("textures/bark.jpg");
+	texs[4] = texture("textures/metal.jpg");
+	texs[5] = texture("textures/metal.jpg");
+	texs[6] = texture("textures/rust.jpg");
+	texs[7] = texture("textures/pavement.jpg");
+	texs[8] = texture("textures/grass2.jpg");
+	texs[9] = texture("textures/bark2.jpg");
+	texs[10] = texture("textures/bark.jpg");
+
+	//load skybox textures
+	array<string, 6> filenames
+	{
+		"textures/cubemap/rt.tga", "textures/cubemap/lf.tga", "textures/cubemap/up2.jpg",
+		"textures/cubemap/dn.tga", "textures/cubemap/bk.tga", "textures/cubemap/ft.tga"
+	};
+
+	//create cubemap
+	cube_map = cubemap(filenames);
 
 	//set light properties
-	spot.set_position(vec3(vec3(-50, 40, 50)));
+	spot.set_position(vec3(vec3(50, 40, -50)));
 	spot.set_light_colour(vec4(0.416f, 0.353f, 0.804f, 1.0f));
 	spot.set_direction(normalize(-spot.get_position()));
 	spot.set_range(500.0f);
 	spot.set_power(10.0f);
 
-	// Load shaders
-	eff.add_shader("shaders/shadow.vert", GL_VERTEX_SHADER);
-	vector<string> frag_shaders{ "shaders/shadow.frag", "shaders/part_s.frag", "shaders/part_shd.frag" };
-	eff.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
+	points[0].set_position(meshes["lamp"].get_transform().position + vec3(0, 10.0f, 0));
+	points[0].set_light_colour(vec4(1.0f, 0.843f, 0.0f, 1.0f));
+	points[0].set_range(20.0f);
+	
+	points[1].set_position(meshes["lamp2"].get_transform().position + vec3(0, 10.0f, 0));
+	points[1].set_light_colour(points[0].get_light_colour());
+	points[1].set_range(20.0f);
 
-	shadow_eff.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
-	shadow_eff.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
+	// Load shaders
+	eff.add_shader("shaders/lights.vert", GL_VERTEX_SHADER);
+	eff.add_shader("shaders/lights.frag", GL_FRAGMENT_SHADER);
+	sky_eff.add_shader("shaders/skybox.vert", GL_VERTEX_SHADER);
+	sky_eff.add_shader("shaders/skybox.frag", GL_FRAGMENT_SHADER);
 
 	// Build effect
 	eff.build();
-	shadow_eff.build();
+	sky_eff.build();
 
 	// Set camera properties
 	cam.set_position(vec3(-50.0f, 10.0f, 0.0f));
@@ -161,6 +194,10 @@ bool load_content() {
 
 
 bool update(float delta_time) {
+
+	// Set skybox position to camera position
+	skybox.get_transform().position = cam.get_position();
+
 	// The ratio of pixels to rotation
 	static double ratio_width = quarter_pi<float>() / static_cast<float>(renderer::get_screen_width());
 	static double ratio_height =
@@ -183,7 +220,7 @@ bool update(float delta_time) {
 	delta_y = delta_y*ratio_height;
 
 	// Rotate camera
-	cam.rotate(delta_x, delta_y);
+	cam.rotate(delta_x, -delta_y);
 
 	// keyboard controls for camera
 	if (glfwGetKey(renderer::get_window(), GLFW_KEY_W))
@@ -229,11 +266,6 @@ bool update(float delta_time) {
 	cursor_x = current_x;
 	cursor_y = current_y;
 
-	// update light position
-	shadow.light_position = spot.get_position();
-	// update light dir
-	shadow.light_dir = spot.get_direction();
-
 	// Update the camera
 	cam.update(delta_time);
 
@@ -241,39 +273,34 @@ bool update(float delta_time) {
 }
 
 bool render() {
-	renderer::set_render_target(shadow);
-	// Clear depth buffer bit
-	glClear(GL_DEPTH_BUFFER_BIT);
-	// Set face cull mode to front
-	glCullFace(GL_FRONT);
-
-	//calcuate light projection matrix
-	mat4 LightProjectionMat = perspective<float>(90.f, renderer::get_screen_aspect(), 0.1f, 1000.f);
-
-	//bind shadow effect
-	renderer::bind(shadow_eff);
-
-	for (auto &e : meshes) {
-		auto m = e.second;
-		// Create MVP matrix
-		auto M = m.get_transform().get_transform_matrix();
-		// View matrix taken from shadow map
-		auto V = shadow.get_view();
-		// calculate mvp
-		auto MVP = LightProjectionMat * V * M;
-		// Set MVP matrix uniform
-		glUniformMatrix4fv(shadow_eff.get_uniform_location("MVP"), // Location of uniform
-			1,                                      // Number of values - 1 mat4
-			GL_FALSE,                               // Transpose the matrix?
-			value_ptr(MVP));                        // Pointer to matrix data
-													// Render mesh
-		renderer::render(m);
-	}
-
-	//set render target to screen
-	renderer::set_render_target();
-	// Set face cull mode to back
-	glCullFace(GL_BACK);
+	// Disable depth test,depth mask,face culling
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glDisable(GL_CULL_FACE);
+	
+	// Bind skybox effect
+	renderer::bind(sky_eff);
+	
+	// Calculate MVP for the skybox
+	auto M = skybox.get_transform().get_transform_matrix();
+	auto V = cam.get_view();
+	auto P = cam.get_projection();
+	auto MVP = P  * V * M;
+	
+	// Set MVP matrix uniform
+	glUniformMatrix4fv(sky_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+	
+	// Set cubemap uniform
+	renderer::bind(cube_map, 0);
+	glUniform1i(sky_eff.get_uniform_location("cubemap"), 0);
+	
+	// Render skybox
+	renderer::render(skybox);
+	
+	// Enable depth test,depth mask,face culling
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_CULL_FACE);
 
 	// Bind shader
 	renderer::bind(eff);
@@ -284,8 +311,6 @@ bool render() {
 	for (auto &e : meshes) {
 		//get mesh
 		auto m = e.second;
-		// Bind effect
-		renderer::bind(eff);
 
 		// Create MVP matrix
 		mat4 M = m.get_transform().get_transform_matrix();
@@ -300,20 +325,11 @@ bool render() {
 		// Set N uniform
 		glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
 
-		// Set lightMVP uniform, using:
-		//Model matrix from m
-		auto light_model = M;
-		// viewmatrix from the shadow map
-		auto shadow_view = shadow.get_view();
-		// Multiply together with LightProjectionMat
-		auto lightMVP = LightProjectionMat * shadow_view * light_model;
-		// Set uniform
-		glUniformMatrix4fv(eff.get_uniform_location("lightMVP"), 1, GL_FALSE, value_ptr(lightMVP));
-
 		// bind material
 		renderer::bind(m.get_material(), "mat");
 		// bind light
 		renderer::bind(spot, "spot");
+		renderer::bind(points, "points");
 		//bind texture
 		renderer::bind(texs[i], i);
 		//set tex uniform
@@ -322,9 +338,9 @@ bool render() {
 		glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 
 		//bind shadow texture and set uniform
-		renderer::bind(texs[i], i + 20);
-		glUniform1i(eff.get_uniform_location("shadow_map"), i + 20);
+		renderer::bind(texs[i], i);
 
+		glUniform1i(eff.get_uniform_location("tex"), i);
 		// render mesh
 		renderer::render(m);
 

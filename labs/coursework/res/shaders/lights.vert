@@ -1,3 +1,4 @@
+
 #version 440
 
 // Model transformation matrix
@@ -28,6 +29,6 @@ void main() {
   // Output other values to fragment shader
   tex_coord_out = tex_coord_in;
   transformed_normal = N * normal;
-  vertex_position = (M * vec4(position, 1.0f)).xyz;
+  vertex_position = (M * vec4(position, 1.0)).xyz;
   // *********************************
 }

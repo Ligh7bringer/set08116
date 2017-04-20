@@ -8,8 +8,7 @@ using namespace glm;
 geometry geom;
 
 //effects
-effect eff;
-effect sky_eff;
+effect eff, sky_eff, normal_map_eff;
 
 free_camera cam;
 
@@ -18,10 +17,12 @@ double cursor_x = 0.0;
 double cursor_y = 0.0;
 
 //textures
-array<texture, 11> texs;
+array<texture, 20> texs;
+texture bark, house, bark_normal_map, wood_normal_map;
 
 //map for meshes
 map<string, mesh> meshes;
+map<string, mesh> nmapobj;
 
 //light
 spot_light spot;
@@ -49,28 +50,23 @@ bool load_content() {
 	meshes["plane"] = mesh(geometry_builder::create_plane());
 
 	//meshes for the scene
-	meshes["house"].set_geometry(geometry("models/house.obj"));
-	meshes["tree"].set_geometry(geometry("models/DeadTree.obj"));
 	meshes["axe"].set_geometry(geometry("models/axe.obj"));
 	meshes["path"] = mesh(geometry_builder::create_box(vec3(60, 1, 15)));
 	meshes["barrel"] = mesh(geometry_builder::create_cylinder(20, 20));
-	meshes["tree2"] = meshes["tree"];
 	meshes["chair"].set_geometry(geometry("models/chair4.obj"));
 	meshes["mill"].set_geometry(geometry("models/windmill.obj"));
 	meshes["lamp"] = mesh(geometry("models/lamp.obj"));
 	meshes["lamp2"] = mesh(geometry("models/lamp.obj"));
+	nmapobj["tree1"].set_geometry(geometry("models/DeadTree.obj"));
+	nmapobj["tree2"].set_geometry(geometry("models/DeadTree.obj"));
+	nmapobj["house"].set_geometry(geometry("models/house.obj"));
 
 	//set materials
 	//house
-	meshes["house"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	meshes["house"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-	meshes["house"].get_material().set_specular(vec4(0.5f, 0.35f, 0.05f, 1.0f));
-	meshes["house"].get_material().set_shininess(5.0f);
-	//tree
-	meshes["tree"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	meshes["tree"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-	meshes["tree"].get_material().set_specular(vec4(0.827f, 0.827f, 0.827f, 1.0f));
-	meshes["tree"].get_material().set_shininess(10.0f);
+	nmapobj["house"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	nmapobj["house"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	nmapobj["house"].get_material().set_specular(vec4(0.5f, 0.35f, 0.05f, 1.0f));
+	nmapobj["house"].get_material().set_shininess(5.0f);
 	//axe
 	meshes["axe"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	meshes["axe"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
@@ -86,11 +82,6 @@ bool load_content() {
 	meshes["barrel"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
 	meshes["barrel"].get_material().set_specular(vec4(0.545f, 0.271f, 0.075f, 1.0f));
 	meshes["barrel"].get_material().set_shininess(10.0f);
-	//tree2
-	meshes["tree2"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	meshes["tree2"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-	meshes["tree2"].get_material().set_specular(vec4(0.663f, 0.663f, 0.663f, 1.0f));
-	meshes["tree2"].get_material().set_shininess(10.0f);
 	//chair
 	meshes["chair"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	meshes["chair"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
@@ -106,14 +97,24 @@ bool load_content() {
 	meshes["lamp"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
 	meshes["lamp"].get_material().set_specular(vec4(0.827f, 0.827f, 0.827f, 1.0f));
 	meshes["lamp"].get_material().set_shininess(20.0f);
-
+	//tree
+	nmapobj["tree1"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	nmapobj["tree1"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	nmapobj["tree1"].get_material().set_specular(vec4(0.827f, 0.827f, 0.827f, 1.0f));
+	nmapobj["tree1"].get_material().set_shininess(10.0f);
+	//tree2
+	nmapobj["tree2"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	nmapobj["tree2"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	nmapobj["tree2"].get_material().set_specular(vec4(0.663f, 0.663f, 0.663f, 1.0f));
+	nmapobj["tree2"].get_material().set_shininess(10.0f);
+	
 	//mesh transformations
 	//house
-	meshes["house"].get_transform().position = vec3(20.0f, 0.0f, 10.0f);
-	meshes["house"].get_transform().orientation = vec3(0.0f, half_pi<float>(), 0.0f);
+	nmapobj["house"].get_transform().position = vec3(20.0f, 0.0f, 10.0f);
+	nmapobj["house"].get_transform().orientation = vec3(0.0f, half_pi<float>(), 0.0f);
 	//tree
-	meshes["tree"].get_transform().position = vec3(10, 0, 40);
-	meshes["tree"].get_transform().scale = vec3(1.5f, 1.5f, 1.5f);
+	nmapobj["tree1"].get_transform().position = vec3(10, 0, 40);
+	nmapobj["tree1"].get_transform().scale = vec3(1.5f, 1.5f, 1.5f);
 	//axe
 	meshes["axe"].get_transform().position = vec3(11.5f, 4.0f, 37);
 	meshes["axe"].get_transform().scale = vec3(8.0f, 8.0f, 8.0f);
@@ -125,8 +126,8 @@ bool load_content() {
 	meshes["barrel"].get_transform().scale = vec3(3.0f, 4.0f, 3.0f);
 	meshes["barrel"].get_transform().position = vec3(15, 2, -2);
 	//another tree
-	meshes["tree2"].get_transform().position = vec3(29, 0, -25);
-	meshes["tree2"].get_transform().scale = vec3(2.0f, 2.0f, 2.0f);
+	nmapobj["tree2"].get_transform().position = vec3(29, 0, -25);
+	nmapobj["tree2"].get_transform().scale = vec3(2.0f, 2.0f, 2.0f);
 	//chair
 	meshes["chair"].get_transform().position = vec3(9.0f, 1.0f, 7.0f);
 	meshes["chair"].get_transform().orientation = vec3(0.0f, pi<float>(), 0.0f);
@@ -137,17 +138,19 @@ bool load_content() {
 	meshes["lamp2"].get_transform().position += vec3(0.0f, 0.0f, 20.0f);
 
 	//textures
+	bark = texture("textures/bark.jpg");
+	house = texture("textures/house.jpg");
+	bark_normal_map = texture("textures/treenormalmap.jpg");
+	wood_normal_map = texture("textures/woodnormalmap.jpg");
+
 	texs[0] = texture("textures/axe.png");
 	texs[1] = texture("textures/barrel2.jpg");
 	texs[2] = texture("textures/wood3.JPG");
-	texs[3] = texture("textures/house.jpg");
+	texs[3] = texture("textures/metal.jpg");
 	texs[4] = texture("textures/metal.jpg");
-	texs[5] = texture("textures/metal.jpg");
-	texs[6] = texture("textures/rust.jpg");
-	texs[7] = texture("textures/pavement.jpg");
-	texs[8] = texture("textures/grass2.jpg");
-	texs[9] = texture("textures/bark2.jpg");
-	texs[10] = texture("textures/bark.jpg");
+	texs[5] = texture("textures/rust.jpg");
+	texs[6] = texture("textures/pavement.jpg");
+	texs[7] = texture("textures/grass2.jpg");
 
 	//load skybox textures
 	array<string, 6> filenames
@@ -175,13 +178,21 @@ bool load_content() {
 	points[1].set_range(20.0f);
 
 	// Load shaders
-	eff.add_shader("shaders/lights.vert", GL_VERTEX_SHADER);
-	eff.add_shader("shaders/lights.frag", GL_FRAGMENT_SHADER);
+	//main effect
+	eff.add_shader("shaders/main.vert", GL_VERTEX_SHADER);
+	eff.add_shader("shaders/main.frag", GL_FRAGMENT_SHADER);
+	//normal map effect
+	normal_map_eff.add_shader("shaders/lights.frag", GL_FRAGMENT_SHADER);
+	normal_map_eff.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
+	normal_map_eff.add_shader("shaders/shader.frag", GL_FRAGMENT_SHADER);
+	normal_map_eff.add_shader("shaders/shader.vert", GL_VERTEX_SHADER);
+	//skybox effect
 	sky_eff.add_shader("shaders/skybox.vert", GL_VERTEX_SHADER);
 	sky_eff.add_shader("shaders/skybox.frag", GL_FRAGMENT_SHADER);
 
-	// Build effect
+	// Build effects
 	eff.build();
+	normal_map_eff.build();
 	sky_eff.build();
 
 	// Set camera properties
@@ -302,9 +313,62 @@ bool render() {
 	glDepthMask(GL_TRUE);
 	glEnable(GL_CULL_FACE);
 
-	// Bind shader
-	renderer::bind(eff);
+	// Bind effect
+	renderer::bind(normal_map_eff);
+	
+	int j = 0;
 
+	for (auto &e : nmapobj) {
+		auto m = e.second;
+
+		mat4 M = m.get_transform().get_transform_matrix();
+		auto V = cam.get_view();
+		auto P = cam.get_projection();
+		auto MVP = P * V * M;
+
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(normal_map_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		// Set M matrix uniform
+		glUniformMatrix4fv(normal_map_eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+		// Set N matrix uniform
+		glUniformMatrix3fv(normal_map_eff.get_uniform_location("N"), 1, GL_FALSE,
+			value_ptr(m.get_transform().get_normal_matrix()));
+
+		// Bind material
+		renderer::bind(m.get_material(), "mat");
+		// Bind light
+		renderer::bind(spot, "spot");
+		renderer::bind(points, "points");
+
+		if (j == 0) {
+			// Bind texture
+			renderer::bind(house, 0);
+			// Set tex uniform
+			glUniform1i(normal_map_eff.get_uniform_location("tex"), 0);
+			// Bind normal_map
+			renderer::bind(wood_normal_map, 1);
+			// Set normal_map uniform
+			glUniform1i(normal_map_eff.get_uniform_location("normal_map"), 1);
+		}
+		else {
+			// Bind texture
+			renderer::bind(bark, 0);
+			// Set tex uniform
+			glUniform1i(normal_map_eff.get_uniform_location("tex"), 0);
+			// Bind normal_map
+			renderer::bind(bark_normal_map, 1);
+			// Set normal_map uniform
+			glUniform1i(normal_map_eff.get_uniform_location("normal_map"), 1);
+		}
+		// Set eye position
+		glUniform3fv(normal_map_eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+		// Render mesh
+		renderer::render(m);
+		j++;
+	}
+
+	renderer::bind(eff);
+	
 	// accumulator to take care of textures and their ids when passing to the shader
 	int i = 0;
 	//for-each loop to take care of all meshes
@@ -337,16 +401,12 @@ bool render() {
 		// set eye position
 		glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 
-		//bind shadow texture and set uniform
-		renderer::bind(texs[i], i);
-
-		glUniform1i(eff.get_uniform_location("tex"), i);
-		// render mesh
+	    // render mesh
 		renderer::render(m);
 
 		//dont forget to increment i
 		i++;
-	}
+	} 
 	return true;
 }
 

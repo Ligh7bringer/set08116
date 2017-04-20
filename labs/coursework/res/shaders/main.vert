@@ -1,10 +1,10 @@
 #version 440
 
-// The model matrix
+// Model transformation matrix
 uniform mat4 M;
-// The transformation matrix
+// Transformation matrix
 uniform mat4 MVP;
-// The normal matrix
+// Normal matrix
 uniform mat3 N;
 
 // Incoming position
@@ -14,7 +14,7 @@ layout(location = 2) in vec3 normal;
 // Incoming texture coordinate
 layout(location = 10) in vec2 tex_coord_in;
 
-// Outgoing vertex position
+// Outgoing position
 layout(location = 0) out vec3 vertex_position;
 // Outgoing transformed normal
 layout(location = 1) out vec3 transformed_normal;
@@ -22,12 +22,12 @@ layout(location = 1) out vec3 transformed_normal;
 layout(location = 2) out vec2 tex_coord_out;
 
 void main() {
-  // Set position
-  gl_Position = MVP * vec4(position, 1);
+  // Calculate screen position
+  gl_Position = MVP * vec4(position, 1.0);
   // *********************************
   // Output other values to fragment shader
   tex_coord_out = tex_coord_in;
   transformed_normal = N * normal;
-  vertex_position = (M * vec4(position, 1.0f)).xyz;
+  vertex_position = (M * vec4(position, 1.0)).xyz;
   // *********************************
 }

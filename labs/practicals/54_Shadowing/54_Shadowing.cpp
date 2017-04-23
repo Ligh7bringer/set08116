@@ -152,7 +152,7 @@ bool render() {
 
   // Bind shader
   renderer::bind(main_eff);
-
+  int i = 0;
   // Render meshes
   for (auto &e : meshes) {
     auto m = e.second;
@@ -176,7 +176,7 @@ bool render() {
 	auto LM = m.get_transform().get_transform_matrix();
 	auto LV = shadow.get_view();
 	auto LP = cam.get_projection();
-	auto LightMVP = LP * LV * LM;
+	auto LightMVP = LightProjectionMat * LV * LM;
 	glUniformMatrix4fv(main_eff.get_uniform_location("lightMVP"), 1, GL_FALSE, value_ptr(LightMVP));
     // Bind material
 	renderer::bind(m.get_material(), "mat");

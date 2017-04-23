@@ -1,15 +1,44 @@
+
 #include <glm\glm.hpp>
 #include <graphics_framework.h>
 
 using namespace std;
 using namespace graphics_framework;
 using namespace glm;
+using namespace std::chrono;
 
-geometry geom;
+const unsigned int MAX_PARTICLES = 1000;
+
+bool rain = false;
+bool greyscale = false;
+
+// particles
+struct particle {
+	vec3 position = vec3(0, 0, 0);
+	vec3 velocity = vec3(0, 0, 0);
+};
+
+// create particles
+particle particles[MAX_PARTICLES];
+
+//buffers we will need
+// transform feedback buffers
+GLuint transform_feedbacks[2];
+// particle buffers
+GLuint particle_buffers_vbo[2];
+
+// VAO
+GLuint vao;
+
+// current buffer
+unsigned int front_buf = 0;
+// render buffer
+unsigned int back_buf = 1;
 
 //effects
-effect eff, sky_eff, normal_map_eff;
+effect eff, sky_eff, normal_map_eff, particle_eff, colour_eff, greyscale_eff, tarnish_eff;
 
+//camera
 free_camera cam;
 
 //cursor position for camera
@@ -18,7 +47,7 @@ double cursor_y = 0.0;
 
 //textures
 array<texture, 20> texs;
-texture bark, house, bark_normal_map, wood_normal_map;
+texture bark, house, plane, bark_normal_map, wood_normal_map, grass_normal_map, tarnish;
 
 //map for meshes
 map<string, mesh> meshes;
@@ -27,27 +56,53 @@ map<string, mesh> nmapobj;
 //light
 spot_light spot;
 vector<point_light> points(2);
+
 //cubemap for the skybox
 cubemap cube_map;
 mesh skybox;
+mesh moon;
+
+//frame buffer used for post processing
+frame_buffer frame;
+geometry screen_quad;
+
+//shadow map
+shadow_map shadow;
 
 bool initialiase() {
+	//set point size
+	glPointSize(3.0f);
 	// hide the pointer
 	glfwSetInputMode(renderer::get_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	// get initial mouse x and y
 	glfwGetCursorPos(renderer::get_window(), &cursor_x, &cursor_y);
+	renderer::setClearColour(0, 0, 0);
 
 	return true;
 }
 
 bool load_content() {
+	// initialise frame buffer
+	frame = frame_buffer(renderer::get_screen_width(), renderer::get_screen_height());
+	// Create screen quad
+	vector<vec3> positions{ vec3(-1.0f, -1.0f, 0.0f), vec3(1.0f, -1.0f, 0.0f), vec3(-1.0f, 1.0f, 0.0f),
+		vec3(1.0f, 1.0f, 0.0f) };
+	vector<vec2> tex_coords{ vec2(0.0, 0.0), vec2(1.0f, 0.0f), vec2(0.0f, 1.0f), vec2(1.0f, 1.0f) };
+	screen_quad.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
+	screen_quad.add_buffer(tex_coords, BUFFER_INDEXES::TEXTURE_COORDS_0);
+	screen_quad.set_type(GL_TRIANGLE_STRIP);
+	screen_quad.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
+	screen_quad.add_buffer(tex_coords, BUFFER_INDEXES::TEXTURE_COORDS_0);
 
 	//skybox
 	skybox = mesh(geometry_builder::create_box());
 	skybox.get_transform().scale = vec3(100, 100, 100);
+	
+	//moon
+	moon = mesh(geometry_builder::create_sphere());
 
 	//plane
-	meshes["plane"] = mesh(geometry_builder::create_plane());
+	nmapobj["plane"] = mesh(geometry_builder::create_plane());
 
 	//meshes for the scene
 	meshes["axe"].set_geometry(geometry("models/axe.obj"));
@@ -62,6 +117,10 @@ bool load_content() {
 	nmapobj["house"].set_geometry(geometry("models/house.obj"));
 
 	//set materials
+	nmapobj["plane"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	nmapobj["plane"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	nmapobj["plane"].get_material().set_specular(vec4(0.5f, 0.35f, 0.05f, 1.0f));
+	nmapobj["plane"].get_material().set_shininess(5.0f);
 	//house
 	nmapobj["house"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	nmapobj["house"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
@@ -97,6 +156,8 @@ bool load_content() {
 	meshes["lamp"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
 	meshes["lamp"].get_material().set_specular(vec4(0.827f, 0.827f, 0.827f, 1.0f));
 	meshes["lamp"].get_material().set_shininess(20.0f);
+	//lamp2
+	meshes["lamp2"].set_material(meshes["lamp"].get_material());
 	//tree
 	nmapobj["tree1"].get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	nmapobj["tree1"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
@@ -107,7 +168,12 @@ bool load_content() {
 	nmapobj["tree2"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
 	nmapobj["tree2"].get_material().set_specular(vec4(0.663f, 0.663f, 0.663f, 1.0f));
 	nmapobj["tree2"].get_material().set_shininess(10.0f);
-	
+	//moon
+	moon.get_material().set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	moon.get_material().set_emissive(vec4(0.753f, 0.753f, 0.753f, 1.0f));
+	moon.get_material().set_specular(vec4(0.663f, 0.663f, 0.663f, 1.0f));
+	moon.get_material().set_shininess(15.0f);
+
 	//mesh transformations
 	//house
 	nmapobj["house"].get_transform().position = vec3(20.0f, 0.0f, 10.0f);
@@ -128,6 +194,7 @@ bool load_content() {
 	//another tree
 	nmapobj["tree2"].get_transform().position = vec3(29, 0, -25);
 	nmapobj["tree2"].get_transform().scale = vec3(2.0f, 2.0f, 2.0f);
+	nmapobj["tree2"].get_transform().rotate(vec3(0, pi<float>(), 0));
 	//chair
 	meshes["chair"].get_transform().position = vec3(9.0f, 1.0f, 7.0f);
 	meshes["chair"].get_transform().orientation = vec3(0.0f, pi<float>(), 0.0f);
@@ -136,12 +203,18 @@ bool load_content() {
 	meshes["mill"].get_transform().scale = vec3(3.0f, 4.0f, 3.0f);
 	//lamp2
 	meshes["lamp2"].get_transform().position += vec3(0.0f, 0.0f, 20.0f);
+	//moon
+	moon.get_transform().scale = vec3(20.0f, 20.0f, 20.0f);
+	moon.get_transform().position = vec3(80, 80, 80);
 
 	//textures
 	bark = texture("textures/bark.jpg");
 	house = texture("textures/house.jpg");
+	plane = texture("textures/grass01.jpg");
+	tarnish = texture("textures/tarnish.jpg");
 	bark_normal_map = texture("textures/treenormalmap.jpg");
 	wood_normal_map = texture("textures/woodnormalmap.jpg");
+	grass_normal_map = texture("textures/grass01_n.jpg");
 
 	texs[0] = texture("textures/axe.png");
 	texs[1] = texture("textures/barrel2.jpg");
@@ -150,7 +223,6 @@ bool load_content() {
 	texs[4] = texture("textures/metal.jpg");
 	texs[5] = texture("textures/rust.jpg");
 	texs[6] = texture("textures/pavement.jpg");
-	texs[7] = texture("textures/grass2.jpg");
 
 	//load skybox textures
 	array<string, 6> filenames
@@ -163,24 +235,25 @@ bool load_content() {
 	cube_map = cubemap(filenames);
 
 	//set light properties
-	spot.set_position(vec3(vec3(50, 40, -50)));
+	spot.set_position(moon.get_transform().position);
 	spot.set_light_colour(vec4(0.416f, 0.353f, 0.804f, 1.0f));
 	spot.set_direction(normalize(-spot.get_position()));
 	spot.set_range(500.0f);
-	spot.set_power(10.0f);
+	spot.set_power(20.0f);
 
 	points[0].set_position(meshes["lamp"].get_transform().position + vec3(0, 10.0f, 0));
 	points[0].set_light_colour(vec4(1.0f, 0.843f, 0.0f, 1.0f));
-	points[0].set_range(20.0f);
-	
+	points[0].set_range(30.0f);
+
 	points[1].set_position(meshes["lamp2"].get_transform().position + vec3(0, 10.0f, 0));
 	points[1].set_light_colour(points[0].get_light_colour());
-	points[1].set_range(20.0f);
+	points[1].set_range(30.0f);
 
 	// Load shaders
 	//main effect
 	eff.add_shader("shaders/main.vert", GL_VERTEX_SHADER);
 	eff.add_shader("shaders/main.frag", GL_FRAGMENT_SHADER);
+	//eff.add_shader("shaders/greyscale.frag", GL_FRAGMENT_SHADER);
 	//normal map effect
 	normal_map_eff.add_shader("shaders/lights.frag", GL_FRAGMENT_SHADER);
 	normal_map_eff.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
@@ -189,25 +262,92 @@ bool load_content() {
 	//skybox effect
 	sky_eff.add_shader("shaders/skybox.vert", GL_VERTEX_SHADER);
 	sky_eff.add_shader("shaders/skybox.frag", GL_FRAGMENT_SHADER);
+	//shaders used to colour the particles
+	colour_eff.add_shader("shaders/basic_colour.frag", GL_FRAGMENT_SHADER);
+	colour_eff.add_shader("shaders/basic_colour.vert", GL_VERTEX_SHADER);
+	//particle eff
+	particle_eff.add_shader("shaders/particle.frag", GL_FRAGMENT_SHADER);
+	particle_eff.add_shader("shaders/particle.vert", GL_VERTEX_SHADER);
+	particle_eff.add_shader("shaders/particle.geom", GL_GEOMETRY_SHADER);
+	//greyscale eff
+	greyscale_eff.add_shader("shaders/greyscale.frag", GL_FRAGMENT_SHADER);
+	greyscale_eff.add_shader("shaders/simple_texture.vert", GL_VERTEX_SHADER);
+	//tarnish effect
+	tarnish_eff.add_shader("shaders/tarnish.frag", GL_FRAGMENT_SHADER);
+	tarnish_eff.add_shader("shaders/tarnish.vert", GL_VERTEX_SHADER);
 
 	// Build effects
 	eff.build();
 	normal_map_eff.build();
 	sky_eff.build();
+	colour_eff.build();
+	particle_eff.build();
+	greyscale_eff.build();
+	tarnish_eff.build();
+
+	//random generator and distribution for the particles
+	default_random_engine rand(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
+	uniform_real_distribution<float> dist;
+
+	// create particles
+	for (unsigned int i = 0; i < MAX_PARTICLES; ++i) {
+		particles[i].position = vec3(((150.0f * dist(rand)) - 50.0f), ((100.0f * dist(rand)) - 5.0f), ((150 * dist(rand)) - 50.0f));
+		particles[i].velocity = vec3(0.0f, 50.0f + dist(rand), 0.0f);
+	}
+
+	// Use the particle effect
+	renderer::bind(particle_eff);
+	// describe output 
+	const GLchar *attrib_names[2] = { "position_out", "velocity_out" };
+	glTransformFeedbackVaryings(particle_eff.get_program(), 2, attrib_names, GL_INTERLEAVED_ATTRIBS);
+
+	// Relink 
+	glLinkProgram(particle_eff.get_program());
+
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	// Gen our VBO data buffers
+	glGenBuffers(2, particle_buffers_vbo);
+	// Place initial particle data in buffer 1
+	glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
+
+	// Fill space with blank data in buffer 2
+	glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(particles), NULL, GL_DYNAMIC_DRAW);
+
+	// generate our feedback objects
+	glGenTransformFeedbacks(2, transform_feedbacks);
+	// link fb[0] to vbo[1]
+	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transform_feedbacks[0]);
+	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, particle_buffers_vbo[1]);
+	// link fb[1] to vbo[0]
+	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transform_feedbacks[1]);
+	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, particle_buffers_vbo[0]);
 
 	// Set camera properties
 	cam.set_position(vec3(-50.0f, 10.0f, 0.0f));
 	cam.set_target(vec3(20.0f, 0.0f, 10.0f));
 	cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f);
 
+	cout << "Press R to toggle rain and night on/off" << endl;
+	cout << "Press G to toggle greyscale on/off" << endl;
+
 	return true;
 }
 
-
 bool update(float delta_time) {
+	if (rain) {
+		//check if first frame
+		static bool first_frame = true;
+		//bind effect
+		renderer::bind(particle_eff);
+		//set delta_time uniform
+		glUniform1f(particle_eff.get_uniform_location("delta_time"), delta_time);
+	}
 
-	// Set skybox position to camera position
-	skybox.get_transform().position = cam.get_position();
+	moon.get_transform().rotate(vec3(0, quarter_pi<float>() / 2 *delta_time, 0));
 
 	// The ratio of pixels to rotation
 	static double ratio_width = quarter_pi<float>() / static_cast<float>(renderer::get_screen_width());
@@ -273,9 +413,19 @@ bool update(float delta_time) {
 		cam.set_position(vec3(50, 10, -50));
 	}
 
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_R)) {
+		rain = !rain;
+	}
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_G)) {
+		greyscale = !greyscale;
+	}
+
 	// old cursor position becomes current
 	cursor_x = current_x;
 	cursor_y = current_y;
+
+	// Set skybox position to camera position
+	skybox.get_transform().position = cam.get_position();
 
 	// Update the camera
 	cam.update(delta_time);
@@ -283,48 +433,124 @@ bool update(float delta_time) {
 	return true;
 }
 
+void render_feeback() {
+	static bool first_frame = true;
+	renderer::bind(particle_eff);
+
+	// Close down the output
+	glEnable(GL_RASTERIZER_DISCARD);
+
+	glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[front_buf]);
+	{
+		// unfortunatly we can't save this stuff in the VAO. Because OGL.
+		GLint position_in_loc = glGetAttribLocation(particle_eff.get_program(), "position_in");
+		GLint velocity_in_loc = glGetAttribLocation(particle_eff.get_program(), "velocity_in");
+		glEnableVertexAttribArray(position_in_loc);
+		glEnableVertexAttribArray(velocity_in_loc);
+		glVertexAttribPointer(position_in_loc, 3, GL_FLOAT, GL_FALSE, sizeof(particle), (const GLvoid *)0);
+		glVertexAttribPointer(velocity_in_loc, 3, GL_FLOAT, GL_FALSE, sizeof(particle), (const GLvoid *)12);
+	}
+
+	// Tell openGL that we are rendering to feedback
+	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transform_feedbacks[front_buf]);
+	glBeginTransformFeedback(GL_POINTS);
+
+	if (first_frame) {
+		// compute our points from the VBO like normal
+		glDrawArrays(GL_POINTS, 0, MAX_PARTICLES);
+		first_frame = false;
+	}
+	else {
+		// compute from feedback data
+		glDrawTransformFeedback(GL_POINTS, transform_feedbacks[back_buf]);
+	}
+
+	// stop feedback recording.
+	glEndTransformFeedback();
+
+	// reenable output
+	glDisable(GL_RASTERIZER_DISCARD);
+}
+
+
 bool render() {
+	
+	if (greyscale) {
+		// Set render target to frame buffer
+		renderer::set_render_target(frame);
+		// Clear frame
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
+
+	//precalculate some of the matrices we will need
+	auto V = cam.get_view();
+	auto P = cam.get_projection();
+	auto PV = P * V;
+
 	// Disable depth test,depth mask,face culling
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 	glDisable(GL_CULL_FACE);
-	
+
 	// Bind skybox effect
 	renderer::bind(sky_eff);
-	
+
 	// Calculate MVP for the skybox
 	auto M = skybox.get_transform().get_transform_matrix();
-	auto V = cam.get_view();
-	auto P = cam.get_projection();
-	auto MVP = P  * V * M;
-	
+	auto MVP = PV * M;
+
 	// Set MVP matrix uniform
 	glUniformMatrix4fv(sky_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
-	
+
 	// Set cubemap uniform
 	renderer::bind(cube_map, 0);
 	glUniform1i(sky_eff.get_uniform_location("cubemap"), 0);
-	
+
 	// Render skybox
 	renderer::render(skybox);
-	
+
 	// Enable depth test,depth mask,face culling
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_CULL_FACE);
 
+	if (rain) {
+		render_feeback();
+		renderer::bind(colour_eff);
+
+		// Set the MVP matrix
+		auto M = mat4(1.0f);
+		auto MVP = PV * M;
+		glUniformMatrix4fv(colour_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		// Set the colour uniform
+		glUniform4fv(colour_eff.get_uniform_location("colour"), 1, value_ptr(vec4(0.0f, 0.0f, 1.0f, 0.5f)));
+
+		// Bind the back particle buffer for rendering
+		glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[front_buf]);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(particle), 0);
+
+		// Perform the render by drawing the transform feedback
+		glDrawTransformFeedback(GL_POINTS, transform_feedbacks[front_buf]);
+		// Disable vertex attribute array
+		glDisableVertexAttribArray(0);
+
+		// Swap front and back buffers
+		front_buf = back_buf;
+		back_buf = (back_buf + 1) % 2;
+
+	}
+
 	// Bind effect
 	renderer::bind(normal_map_eff);
-	
-	int j = 0;
 
+	int j = 0;
 	for (auto &e : nmapobj) {
 		auto m = e.second;
 
 		mat4 M = m.get_transform().get_transform_matrix();
-		auto V = cam.get_view();
-		auto P = cam.get_projection();
-		auto MVP = P * V * M;
+		auto MVP = PV * M;
 
 		// Set MVP matrix uniform
 		glUniformMatrix4fv(normal_map_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
@@ -350,6 +576,16 @@ bool render() {
 			// Set normal_map uniform
 			glUniform1i(normal_map_eff.get_uniform_location("normal_map"), 1);
 		}
+		else if (j == 1) {
+			// Bind texture
+			renderer::bind(plane, 0);
+			// Set tex uniform
+			glUniform1i(normal_map_eff.get_uniform_location("tex"), 0);
+			// Bind normal_map
+			renderer::bind(grass_normal_map, 1);
+			// Set normal_map uniform
+			glUniform1i(normal_map_eff.get_uniform_location("normal_map"), 1);
+		}
 		else {
 			// Bind texture
 			renderer::bind(bark, 0);
@@ -368,7 +604,7 @@ bool render() {
 	}
 
 	renderer::bind(eff);
-	
+
 	// accumulator to take care of textures and their ids when passing to the shader
 	int i = 0;
 	//for-each loop to take care of all meshes
@@ -378,9 +614,7 @@ bool render() {
 
 		// Create MVP matrix
 		mat4 M = m.get_transform().get_transform_matrix();
-		auto V = cam.get_view();
-		auto P = cam.get_projection();
-		auto MVP = P * V * M;
+		auto MVP = PV * M;
 
 		// Set MVP uniform
 		glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
@@ -401,12 +635,53 @@ bool render() {
 		// set eye position
 		glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 
-	    // render mesh
+		// render mesh
 		renderer::render(m);
 
 		//dont forget to increment i
 		i++;
-	} 
+	}
+
+	// Bind effect
+	renderer::bind(tarnish_eff);
+	// Create MVP matrix
+	M = moon.get_transform().get_transform_matrix();
+	MVP = PV * M;
+	// Set MVP matrix uniform
+	glUniformMatrix4fv(tarnish_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+	// Set M matrix uniform
+	glUniformMatrix4fv(tarnish_eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+	// Set N matrix uniform
+	glUniformMatrix3fv(tarnish_eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(moon.get_transform().get_normal_matrix()));
+	// Set eye_pos value
+	glUniform3fv(tarnish_eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+	// Bind cubemap to TU 0
+	renderer::bind(cube_map, 0);
+	// Set cubemap uniform
+	glUniform1i(tarnish_eff.get_uniform_location("cubemap"), 0);
+	// Bind tarnish to TU 1
+	renderer::bind(tarnish, 1);
+	// Set tarnish uniform to 1
+	glUniform1i(tarnish_eff.get_uniform_location("tex"), 1);
+	// Render mesh
+	renderer::render(moon);
+
+	if (greyscale) {
+		renderer::set_render_target();
+		// Bind Tex effect
+		renderer::bind(greyscale_eff);
+		// MVP is now the identity matrix
+		MVP = mat4(1.0f);
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(greyscale_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		// Bind texture from frame buffer
+		renderer::bind(frame.get_frame(), 0);
+		// Set the tex uniform
+		glUniform1i(greyscale_eff.get_uniform_location("tex"), 0);
+		// Render the screen quad
+		renderer::render(screen_quad);
+	}
+
 	return true;
 }
 
@@ -414,8 +689,8 @@ void main() {
 	// Create application
 	app application("Graphics Coursework");
 	// Set load content, update and render methods
-	application.set_load_content(load_content);
 	application.set_initialise(initialiase);
+	application.set_load_content(load_content);
 	application.set_update(update);
 	application.set_render(render);
 	// Run application

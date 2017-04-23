@@ -11,6 +11,7 @@ const unsigned int MAX_PARTICLES = 1000;
 
 bool rain = false;
 bool greyscale = false;
+bool motion_blur = false;
 
 // particles
 struct particle {
@@ -36,7 +37,7 @@ unsigned int front_buf = 0;
 unsigned int back_buf = 1;
 
 //effects
-effect eff, sky_eff, normal_map_eff, particle_eff, colour_eff, greyscale_eff, tarnish_eff;
+effect eff, sky_eff, normal_map_eff, particle_eff, colour_eff, greyscale_eff, tarnish_eff, motion_blur_eff;
 
 //camera
 free_camera cam;
@@ -52,6 +53,7 @@ texture bark, house, plane, bark_normal_map, wood_normal_map, grass_normal_map, 
 //map for meshes
 map<string, mesh> meshes;
 map<string, mesh> nmapobj;
+map<string, map<string, mesh>> all_meshes;
 
 //light
 spot_light spot;
@@ -66,8 +68,10 @@ mesh moon;
 frame_buffer frame;
 geometry screen_quad;
 
-//shadow map
-shadow_map shadow;
+//fram buffers needed for motion blur
+frame_buffer frames[2];
+frame_buffer temp_frame;
+unsigned int current_frame = 0;
 
 bool initialiase() {
 	//set point size
@@ -84,6 +88,12 @@ bool initialiase() {
 bool load_content() {
 	// initialise frame buffer
 	frame = frame_buffer(renderer::get_screen_width(), renderer::get_screen_height());
+	// more frame buffers
+	frames[0] = frame_buffer(renderer::get_screen_width(), renderer::get_screen_height());
+	frames[1] = frame_buffer(renderer::get_screen_width(), renderer::get_screen_height());
+	// temp framebuffer
+	temp_frame = frame_buffer(renderer::get_screen_width(), renderer::get_screen_height());
+
 	// Create screen quad
 	vector<vec3> positions{ vec3(-1.0f, -1.0f, 0.0f), vec3(1.0f, -1.0f, 0.0f), vec3(-1.0f, 1.0f, 0.0f),
 		vec3(1.0f, 1.0f, 0.0f) };
@@ -207,6 +217,9 @@ bool load_content() {
 	moon.get_transform().scale = vec3(20.0f, 20.0f, 20.0f);
 	moon.get_transform().position = vec3(80, 80, 80);
 
+	all_meshes["meshes"] = meshes;
+	all_meshes["nmapobj"] = nmapobj;
+
 	//textures
 	bark = texture("textures/bark.jpg");
 	house = texture("textures/house.jpg");
@@ -275,6 +288,9 @@ bool load_content() {
 	//tarnish effect
 	tarnish_eff.add_shader("shaders/tarnish.frag", GL_FRAGMENT_SHADER);
 	tarnish_eff.add_shader("shaders/tarnish.vert", GL_VERTEX_SHADER);
+	//motion blur effect
+	motion_blur_eff.add_shader("shaders/simple_texture.vert", GL_VERTEX_SHADER);
+	motion_blur_eff.add_shader("shaders/motion_blur.frag", GL_FRAGMENT_SHADER);
 
 	// Build effects
 	eff.build();
@@ -284,6 +300,7 @@ bool load_content() {
 	particle_eff.build();
 	greyscale_eff.build();
 	tarnish_eff.build();
+	motion_blur_eff.build();
 
 	//random generator and distribution for the particles
 	default_random_engine rand(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
@@ -333,11 +350,14 @@ bool load_content() {
 
 	cout << "Press R to toggle rain and night on/off" << endl;
 	cout << "Press G to toggle greyscale on/off" << endl;
-
+	cout << "Press B to toggle motion blur on/off" << endl;
 	return true;
 }
 
 bool update(float delta_time) {
+	// Flip frame
+	current_frame = (current_frame + 1) % 2;
+
 	if (rain) {
 		//check if first frame
 		static bool first_frame = true;
@@ -419,7 +439,9 @@ bool update(float delta_time) {
 	if (glfwGetKey(renderer::get_window(), GLFW_KEY_G)) {
 		greyscale = !greyscale;
 	}
-
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_B)) {
+		motion_blur = !motion_blur;
+	}
 	// old cursor position becomes current
 	cursor_x = current_x;
 	cursor_y = current_y;
@@ -472,9 +494,13 @@ void render_feeback() {
 	glDisable(GL_RASTERIZER_DISCARD);
 }
 
-
 bool render() {
-	
+	if (motion_blur) {
+		// Set render target to temp frame
+		renderer::set_render_target(temp_frame);
+		// Clear frame
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
 	if (greyscale) {
 		// Set render target to frame buffer
 		renderer::set_render_target(frame);
@@ -483,8 +509,8 @@ bool render() {
 	}
 
 	//precalculate some of the matrices we will need
-	auto V = cam.get_view();
 	auto P = cam.get_projection();
+	auto V = cam.get_view();
 	auto PV = P * V;
 
 	// Disable depth test,depth mask,face culling
@@ -680,10 +706,51 @@ bool render() {
 		glUniform1i(greyscale_eff.get_uniform_location("tex"), 0);
 		// Render the screen quad
 		renderer::render(screen_quad);
+	}	
+
+	if (motion_blur) {
+		// Set render target to current frame
+		renderer::set_render_target(frames[current_frame]);
+		// Clear frame
+		glClear(GL_DEPTH_BUFFER_BIT);
+		// Bind motion blur effect
+		renderer::bind(motion_blur_eff);
+		// MVP is now the identity matrix
+		mat4 MVP = mat4(1, 0, 0, 0,
+						0, 1, 0, 0,
+						0, 0, 1, 0,
+						0, 0, 0, 1);
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(motion_blur_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		// Bind tempframe to TU 0.
+		renderer::bind(temp_frame.get_frame(), 0);
+		// Bind frames[(current_frame + 1) % 2] to TU 1.
+		renderer::bind(frames[(current_frame + 1) % 2].get_frame(), 1);
+		// Set tex uniforms
+		glUniform1i(motion_blur_eff.get_uniform_location("previous_frame"), 1);
+		glUniform1i(motion_blur_eff.get_uniform_location("tex"), 0);
+		// Set blend factor (0.9f)
+		glUniform1f(motion_blur_eff.get_uniform_location("blend_factor"), 0.9f);
+		// Render screen quad
+		renderer::render(screen_quad);
+		// !!!!!!!!!!!!!!! SCREEN PASS !!!!!!!!!!!!!!!!
+
+		// Set render target back to the screen
+		renderer::set_render_target();
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(motion_blur_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		// Bind texture from frame buffer
+		renderer::bind(frames[current_frame].get_frame(), 3);
+		// Set the uniform
+		glUniform1i(motion_blur_eff.get_uniform_location("tex"), 3);
+		// Render the screen quad
+		renderer::render(screen_quad);
 	}
 
 	return true;
 }
+
+
 
 void main() {
 	// Create application

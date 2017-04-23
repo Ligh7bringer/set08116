@@ -220,7 +220,7 @@ bool render() {
   // Set render target to temp frame
 	renderer::set_render_target(temp_frame);
   // Clear frame
-	glClear(GL_DEPTH_BUFFER_BIT);
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   // *********************************
   // Render meshes
   for (auto &e : meshes) {

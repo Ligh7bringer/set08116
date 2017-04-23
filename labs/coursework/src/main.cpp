@@ -1,4 +1,3 @@
-
 #include <glm\glm.hpp>
 #include <graphics_framework.h>
 
@@ -106,7 +105,7 @@ bool load_content() {
 	//skybox
 	skybox = mesh(geometry_builder::create_box());
 	skybox.get_transform().scale = vec3(100, 100, 100);
-	
+
 	//moon
 	moon = mesh(geometry_builder::create_sphere());
 
@@ -248,7 +247,7 @@ bool load_content() {
 	spot.set_light_colour(vec4(0.416f, 0.353f, 0.804f, 1.0f));
 	spot.set_direction(normalize(-spot.get_position()));
 	spot.set_range(500.0f);
-	spot.set_power(20.0f);
+	spot.set_power(5.0f);
 
 	points[0].set_position(meshes["lamp"].get_transform().position + vec3(0, 10.0f, 0));
 	points[0].set_light_colour(vec4(1.0f, 0.843f, 0.0f, 1.0f));
@@ -410,7 +409,7 @@ bool update(float delta_time) {
 	{
 		cam.move(vec3(0.0f, 1.0f, 0.0f));
 	}
-	if (glfwGetKey(renderer::get_window(), GLFW_KEY_LEFT_SHIFT))
+	if (glfwGetKey(renderer::get_window(), GLFW_KEY_LEFT_SHIFT) )
 	{
 		cam.move(vec3(0.0f, -1.0f, 0.0f));
 	}
@@ -714,7 +713,7 @@ bool render() {
 		glUniform1i(greyscale_eff.get_uniform_location("tex"), 0);
 		// Render the screen quad
 		renderer::render(screen_quad);
-	}	
+	}
 
 	if (motion_blur) {
 		// Set render target to current frame
@@ -725,9 +724,9 @@ bool render() {
 		renderer::bind(motion_blur_eff);
 		// MVP is now the identity matrix
 		mat4 MVP = mat4(1, 0, 0, 0,
-						0, 1, 0, 0,
-						0, 0, 1, 0,
-						0, 0, 0, 1);
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1);
 		// Set MVP matrix uniform
 		glUniformMatrix4fv(motion_blur_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
 		// Bind tempframe to TU 0.

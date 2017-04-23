@@ -83,7 +83,10 @@
         \item Shading
         \item Lighting
         \item Texturing
+        \item Post processing
         \item Transformations
+        \item Optimisation
+        \item Post processing
     \end{itemize}
     \paragraph{Shading}
     Shading is a method which adds depth perception to 3D models to make them look more realistic. The direction of the light as well as the direction an object is facing are taken into account. Parts of an object facing directly the light source are more lit, hence why they appear brighter. On the other hand, parts facing away from the light source receive less light and are therefore darker.
@@ -107,6 +110,10 @@
 
     Translating an object changes its position in the world.
 
+    \paragraph{Optimisation} Optimisation aims to improve a scene's frame rate and build time. As the scene becomes more complicated, frame rate problems can be noticed. This is why optimisation is necessary.
+
+    \paragraph{Post processing} Post processing allows the application of an effect on the whole scene more easily.
+
 
     \paragraph{Motivation}
     The motivation behind this project is the application of skills developed from undertaking the Computer Graphics (SET08116) module and gaining further knowledge in the field of graphics rendering by creating a 3D scene.
@@ -118,17 +125,23 @@
     While developing the project, the main source used was the SET08116 Workbook \cite{workbook}. Most methods and practices can be found there or were inspired by it.
 
     \section{Implementation}
-    The following key graphical techniques were implemented in the project
+    The following key techniques were implemented in the project
     \begin{itemize}
         \item Phong shading
-        \item Spot lighting
+        \item Spot and point lighting
         \item Texturing
         \item Transformations
         \item Free camera
+        \item Normal mapping
+        \item Post processing
+        \item Environmental mapping and tarnishing
+        \item Particle effects and billboarding
+        \item Code optimisation
+        \item Skybox
     \end{itemize}
 
     \paragraph{Lighting}
-    The light source used in the project is a spotlight (Figure 2). It is positioned above the scene and it lights the scene with blue light as if it were moonlight. The equations used to calculate the necessary values for the spot light are as follows:
+    The light sources used in the project are a spotlight (Figure 2). It is place where the moon is and it lights the scene with blue light as if it were moonlight. The equations used to calculate the necessary values for the spot light are as follows:
     \textit{Equation 1} is used to calculate spot light intensity using the direction of the light, the direction to the light and the power of the light.
     \textit{Equation 2} is the calculation of the attenuation factor using the attenuation values.
     \textit{Equation 3} provides the final colour.
@@ -143,6 +156,7 @@
     \end{equation}
     where \textit{C} is the final colour, \textit{I} is the light intensity, \textit{A} is the attenuation factor and \textit{L} is the light colour. The resulting colour is then used in the Phong shading equation. Phong shading is implemented in conjunction with the spot light to create the effect of objects having depth.
     \figuremacro{h}{light.png}{Spot light}{ \textit{Moonlight effect with spot light} }{1.0}
+    There are two additional point lights in front of the house which light the surrounding area.
 
     \paragraph{Phong shading}
     Phong shading (Figure 3) refers to the principle of colouring different faces of objects depending on the texture and light levels. The colour of every pixel is calculated depending on the light direction, location and colour as well as material properties.
@@ -155,9 +169,40 @@
 
     \paragraph{Free camera} A free camera was implemented allowing free movement around the scene. The controls for the camera are the mouse, used to change the view direction, and the keyboard to move the camera.
 
+    \paragraph{Normal mapping} Normal mapping is a technique which creates more realistic surfaces of the objects by creating bumps or dents. Normal maps are commonly RGB images where the RGB components correspond to the X, Y, and Z coordinates, respectively, of the surface normal. An example is shown in Figure 4.
+
+    \figuremacro{h}{nm.png}{Normal mapping}{ \textit{Effect of tree bark having bumps and dents} }{1.0}
+
+    \paragraph{Post processing} Post processing is used for effects which affect the whole scene. Normally, the effect would have to be applied to each object, however when using post processing this is not necessary. Instead, the whole scene is rendered in a frame buffer which can then be saved as a texture. Effects can then be applied on the texture.
+    Motion blur and a sepia filter were used in the project.
+
+    Motion blur occurs when the camera moves. The information of what the scene looked like in the previous frame is merged with the current frame. This creates a distorted effect as if the viewer were passing by the objects quickly. An example can be seen on Figure 5.
+
+    \figuremacro{h}{blur.png}{Motion blur}{}{1.0}
+
+    The sepia filter colours the whole scene in a reddish-brown colour. The effect is achieved by rendering the whole scene in the frame buffer and storing it as a texture. The texture is then sampled using texture coordinates. The final colour is calculated by scaling the original colour with the RGB values of the filter. \textit{Equation 5} shows the calculation of the final colour.
+      \begin{equation}
+      C_f = C * \mathbf{(0.314_r, 0.169_g, -0.090_b)}
+      \end{equation}
+
+    \paragraph{Environmental mapping and tarnishing} Environmental mapping and tarnishing were combined to create the effect of an object looking like a moon.
+
+    Environmental mapping is a technique used for creating reflective surfaces. A sphere's normal and texture coordinates are used to apply a texture which creates the effect of reflections.
+
+    Tarnishing is the effect of blending two textures. An image of the moon's surface is applied to the reflective sphere created with environmental mapping. The result can be seen on Figure 6.
+
+    \figuremacro{h}{moon.png}{Moon}{ \textit{Moon created with environmental mapping and tarnishing} }{1.0}
+
+    \paragraph {Particle effects and billboarding} A particle system was implemented in the project. Particles are small objects used to create effects which require a large number of small sprites. Particles are created above the scene with random X and Y coordinates. They move down until they reach the ground. In conjuction with billboarding, which is when an object is always facing the camera, the effect of rain is created.
+
+    \paragraph{Code optimisation} Some basic code optimisation was done. Matrices, such as the view and projection matrix, are precalcuated as they are the same for every object that is rendered. What is more, the number of "gl" calls was reduced by storing uniform variable locations in variables before rendering.
+
+    \paragraph{Skybox} A skybox is a cube in which the scene is placed. Textures are then applied to each of its' faces to create the effect of an environment surrounding the scene.
+
     \section{Future work}
 	  Although a number of key graphics principles were implemented, the project still has room for improvement.
-    Shadowing was attempted, however due to time constraints, it was not fully implemented and it will be one of the effects to be added in the future. Furthermore, other techniques such as normal mapping, animation, skybox, particle effects will be implemented as well.
+    The scene could have benefitted from more animated objects.
+    Due to the lack of lighting, shadowing was decided not to be implemented. The addition of more lights or a day and night cycle could make shadowing essential.
 
     \section{Conclusion}
     To conclude, this project employs a number of basic graphical techniques in order to create a realistic and visually pleasing scene using OpenGL. Although the result is satisfactory, implementing more features would certainly improve the project's aesthetics and effects.

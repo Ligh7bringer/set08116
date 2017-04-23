@@ -1,3 +1,9 @@
+Computer Graphics practicals and coursework.
+Link to coursework video: https://www.youtube.com/watch?v=9WYZDTd0lUM
+
+
+
+
 # SET08116 Computer Graphics
 ## Games Development Module
 ### Copyright (C) 2016  Edinburgh Napier University

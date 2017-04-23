@@ -53,7 +53,6 @@ texture bark, house, plane, bark_normal_map, wood_normal_map, grass_normal_map, 
 //map for meshes
 map<string, mesh> meshes;
 map<string, mesh> nmapobj;
-map<string, map<string, mesh>> all_meshes;
 
 //light
 spot_light spot;
@@ -217,9 +216,6 @@ bool load_content() {
 	moon.get_transform().scale = vec3(20.0f, 20.0f, 20.0f);
 	moon.get_transform().position = vec3(80, 80, 80);
 
-	all_meshes["meshes"] = meshes;
-	all_meshes["nmapobj"] = nmapobj;
-
 	//textures
 	bark = texture("textures/bark.jpg");
 	house = texture("textures/house.jpg");
@@ -349,7 +345,7 @@ bool load_content() {
 	cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f);
 
 	cout << "Press R to toggle rain and night on/off" << endl;
-	cout << "Press G to toggle greyscale on/off" << endl;
+	cout << "Press G to toggle sepia on/off" << endl;
 	cout << "Press B to toggle motion blur on/off" << endl;
 	return true;
 }
@@ -367,7 +363,7 @@ bool update(float delta_time) {
 		glUniform1f(particle_eff.get_uniform_location("delta_time"), delta_time);
 	}
 
-	moon.get_transform().rotate(vec3(0, quarter_pi<float>() / 2 *delta_time, 0));
+	moon.get_transform().rotate(vec3(0, quarter_pi<float>() / 2 * delta_time, 0));
 
 	// The ratio of pixels to rotation
 	static double ratio_width = quarter_pi<float>() / static_cast<float>(renderer::get_screen_width());
@@ -495,6 +491,7 @@ void render_feeback() {
 }
 
 bool render() {
+
 	if (motion_blur) {
 		// Set render target to temp frame
 		renderer::set_render_target(temp_frame);
@@ -508,7 +505,7 @@ bool render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 
-	//precalculate some of the matrices we will need
+	// precalculate some of the matrices we will need
 	auto P = cam.get_projection();
 	auto V = cam.get_view();
 	auto PV = P * V;
@@ -570,6 +567,15 @@ bool render() {
 
 	// Bind effect
 	renderer::bind(normal_map_eff);
+	auto MVPloc = normal_map_eff.get_uniform_location("MVP");
+	auto Mloc = normal_map_eff.get_uniform_location("M");
+	auto Nloc = normal_map_eff.get_uniform_location("N");
+	auto eyeloc = normal_map_eff.get_uniform_location("eye_pos");
+	auto texloc = normal_map_eff.get_uniform_location("tex");
+	auto nmloc = normal_map_eff.get_uniform_location("normal_map");
+	// Bind light
+	renderer::bind(spot, "spot");
+	renderer::bind(points, "points");
 
 	int j = 0;
 	for (auto &e : nmapobj) {
@@ -579,57 +585,62 @@ bool render() {
 		auto MVP = PV * M;
 
 		// Set MVP matrix uniform
-		glUniformMatrix4fv(normal_map_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, value_ptr(MVP));
 		// Set M matrix uniform
-		glUniformMatrix4fv(normal_map_eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+		glUniformMatrix4fv(Mloc, 1, GL_FALSE, value_ptr(M));
 		// Set N matrix uniform
-		glUniformMatrix3fv(normal_map_eff.get_uniform_location("N"), 1, GL_FALSE,
+		glUniformMatrix3fv(Nloc, 1, GL_FALSE,
 			value_ptr(m.get_transform().get_normal_matrix()));
 
 		// Bind material
 		renderer::bind(m.get_material(), "mat");
-		// Bind light
-		renderer::bind(spot, "spot");
-		renderer::bind(points, "points");
 
 		if (j == 0) {
 			// Bind texture
 			renderer::bind(house, 0);
 			// Set tex uniform
-			glUniform1i(normal_map_eff.get_uniform_location("tex"), 0);
+			glUniform1i(texloc, 0);
 			// Bind normal_map
 			renderer::bind(wood_normal_map, 1);
 			// Set normal_map uniform
-			glUniform1i(normal_map_eff.get_uniform_location("normal_map"), 1);
+			glUniform1i(nmloc, 1);
 		}
 		else if (j == 1) {
 			// Bind texture
 			renderer::bind(plane, 0);
 			// Set tex uniform
-			glUniform1i(normal_map_eff.get_uniform_location("tex"), 0);
+			glUniform1i(texloc, 0);
 			// Bind normal_map
 			renderer::bind(grass_normal_map, 1);
 			// Set normal_map uniform
-			glUniform1i(normal_map_eff.get_uniform_location("normal_map"), 1);
+			glUniform1i(nmloc, 1);
 		}
 		else {
 			// Bind texture
 			renderer::bind(bark, 0);
 			// Set tex uniform
-			glUniform1i(normal_map_eff.get_uniform_location("tex"), 0);
+			glUniform1i(texloc, 0);
 			// Bind normal_map
 			renderer::bind(bark_normal_map, 1);
 			// Set normal_map uniform
-			glUniform1i(normal_map_eff.get_uniform_location("normal_map"), 1);
+			glUniform1i(nmloc, 1);
 		}
 		// Set eye position
-		glUniform3fv(normal_map_eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+		glUniform3fv(eyeloc, 1, value_ptr(cam.get_position()));
 		// Render mesh
 		renderer::render(m);
 		j++;
 	}
 
 	renderer::bind(eff);
+	MVPloc = eff.get_uniform_location("MVP");
+	Mloc = eff.get_uniform_location("M");
+	Nloc = eff.get_uniform_location("N");
+	eyeloc = eff.get_uniform_location("eye_pos");
+	texloc = eff.get_uniform_location("tex");
+	// bind light
+	renderer::bind(spot, "spot");
+	renderer::bind(points, "points");
 
 	// accumulator to take care of textures and their ids when passing to the shader
 	int i = 0;
@@ -643,23 +654,20 @@ bool render() {
 		auto MVP = PV * M;
 
 		// Set MVP uniform
-		glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, value_ptr(MVP));
 		// set M uniform
-		glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+		glUniformMatrix4fv(Mloc, 1, GL_FALSE, value_ptr(M));
 		// Set N uniform
-		glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
+		glUniformMatrix3fv(Nloc, 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
 
 		// bind material
 		renderer::bind(m.get_material(), "mat");
-		// bind light
-		renderer::bind(spot, "spot");
-		renderer::bind(points, "points");
 		//bind texture
 		renderer::bind(texs[i], i);
 		//set tex uniform
-		glUniform1i(eff.get_uniform_location("tex"), i);
+		glUniform1i(texloc, i);
 		// set eye position
-		glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+		glUniform3fv(eyeloc, 1, value_ptr(cam.get_position()));
 
 		// render mesh
 		renderer::render(m);
@@ -733,7 +741,6 @@ bool render() {
 		glUniform1f(motion_blur_eff.get_uniform_location("blend_factor"), 0.9f);
 		// Render screen quad
 		renderer::render(screen_quad);
-		// !!!!!!!!!!!!!!! SCREEN PASS !!!!!!!!!!!!!!!!
 
 		// Set render target back to the screen
 		renderer::set_render_target();
